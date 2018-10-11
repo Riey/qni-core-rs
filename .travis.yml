@@ -23,6 +23,7 @@ cache: cargo
 matrix:
   allow_failures:
     - rust: stable
+    - rust: beta
 
 script:
   - cargo build --verbose --all
