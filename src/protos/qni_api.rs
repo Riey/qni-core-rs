@@ -1642,7 +1642,7 @@ pub enum InputResponse_oneof_data {
     FLOAT(f32),
     DATE(::protobuf::well_known_types::Timestamp),
     DATETIME(::protobuf::well_known_types::Timestamp),
-    TIME(::protobuf::well_known_types::Timestamp),
+    TIME(::protobuf::well_known_types::Duration),
     COLOR(u32),
 }
 
@@ -1922,7 +1922,7 @@ impl InputResponse {
         }
     }
 
-    // .google.protobuf.Timestamp TIME = 32;
+    // .google.protobuf.Duration TIME = 32;
 
     pub fn clear_TIME(&mut self) {
         self.data = ::std::option::Option::None;
@@ -1936,15 +1936,15 @@ impl InputResponse {
     }
 
     // Param is passed by value, moved
-    pub fn set_TIME(&mut self, v: ::protobuf::well_known_types::Timestamp) {
+    pub fn set_TIME(&mut self, v: ::protobuf::well_known_types::Duration) {
         self.data = ::std::option::Option::Some(InputResponse_oneof_data::TIME(v))
     }
 
     // Mutable pointer to the field.
-    pub fn mut_TIME(&mut self) -> &mut ::protobuf::well_known_types::Timestamp {
+    pub fn mut_TIME(&mut self) -> &mut ::protobuf::well_known_types::Duration {
         if let ::std::option::Option::Some(InputResponse_oneof_data::TIME(_)) = self.data {
         } else {
-            self.data = ::std::option::Option::Some(InputResponse_oneof_data::TIME(::protobuf::well_known_types::Timestamp::new()));
+            self.data = ::std::option::Option::Some(InputResponse_oneof_data::TIME(::protobuf::well_known_types::Duration::new()));
         }
         match self.data {
             ::std::option::Option::Some(InputResponse_oneof_data::TIME(ref mut v)) => v,
@@ -1953,21 +1953,21 @@ impl InputResponse {
     }
 
     // Take field
-    pub fn take_TIME(&mut self) -> ::protobuf::well_known_types::Timestamp {
+    pub fn take_TIME(&mut self) -> ::protobuf::well_known_types::Duration {
         if self.has_TIME() {
             match self.data.take() {
                 ::std::option::Option::Some(InputResponse_oneof_data::TIME(v)) => v,
                 _ => panic!(),
             }
         } else {
-            ::protobuf::well_known_types::Timestamp::new()
+            ::protobuf::well_known_types::Duration::new()
         }
     }
 
-    pub fn get_TIME(&self) -> &::protobuf::well_known_types::Timestamp {
+    pub fn get_TIME(&self) -> &::protobuf::well_known_types::Duration {
         match self.data {
             ::std::option::Option::Some(InputResponse_oneof_data::TIME(ref v)) => v,
-            _ => ::protobuf::well_known_types::Timestamp::default_instance(),
+            _ => ::protobuf::well_known_types::Duration::default_instance(),
         }
     }
 
@@ -2249,7 +2249,7 @@ impl ::protobuf::Message for InputResponse {
                     InputResponse::has_DATETIME,
                     InputResponse::get_DATETIME,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, ::protobuf::well_known_types::Timestamp>(
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, ::protobuf::well_known_types::Duration>(
                     "TIME",
                     InputResponse::has_TIME,
                     InputResponse::get_TIME,
@@ -6327,82 +6327,83 @@ impl ::protobuf::reflect::ProtobufValue for TextAlign {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\rqni-api.proto\x12\x07qni.api\x1a\x1fgoogle/protobuf/timestamp.proto\
-    \x1a\x1bgoogle/protobuf/empty.proto\"!\n\x0bStringArray\x12\x12\n\x04dat\
-    a\x18\x01\x20\x03(\tR\x04data\"B\n\rErrorResponse\x12\x19\n\x08req_type\
-    \x18\x01\x20\x01(\tR\x07reqType\x12\x16\n\x06reason\x18\x02\x20\x01(\tR\
-    \x06reason\"\xfb\x05\n\x0cInputRequest\x122\n\x06expire\x18\x01\x20\x01(\
-    \x0b2\x1a.google.protobuf.TimestampR\x06expire\x12.\n\x05TOUCH\x18\n\x20\
-    \x01(\x0b2\x16.google.protobuf.EmptyH\0R\x05TOUCH\x12.\n\x05ENTER\x18\
-    \x0b\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x05ENTER\x120\n\x06ANYK\
-    EY\x18\x0c\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x06ANYKEY\x122\n\
-    \x07BOOLEAN\x18\r\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x07BOOLEAN\
-    \x12*\n\x03STR\x18\x14\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x03ST\
-    R\x12\x20\n\x0bSTR_MAX_LEN\x18\x15\x20\x01(\rH\0R\tSTRMAXLEN\x125\n\nSTR\
-    _SELECT\x18\x16\x20\x01(\x0b2\x14.qni.api.StringArrayH\0R\tSTRSELECT\x12\
-    *\n\x03INT\x18\x1e\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x03INT\
-    \x12\x20\n\x0bINT_MAX_LEN\x18\x1f\x20\x01(\rH\0R\tINTMAXLEN\x12.\n\x05FL\
-    OAT\x18(\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x05FLOAT\x12$\n\rFL\
-    OAT_MAX_LEN\x18)\x20\x01(\rH\0R\x0bFLOATMAXLEN\x12,\n\x04DATE\x182\x20\
-    \x01(\x0b2\x16.google.protobuf.EmptyH\0R\x04DATE\x124\n\x08DATETIME\x183\
-    \x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x08DATETIME\x12,\n\x04TIME\
-    \x184\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x04TIME\x12.\n\x05COLO\
-    R\x18<\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x05COLORB\x06\n\x04da\
-    ta\"\xd9\x02\n\rInputResponse\x12.\n\x05EMPTY\x18\n\x20\x01(\x0b2\x16.go\
-    ogle.protobuf.EmptyH\0R\x05EMPTY\x12\x1a\n\x07BOOLEAN\x18\x14\x20\x01(\
-    \x08H\0R\x07BOOLEAN\x12\x12\n\x03STR\x18\x15\x20\x01(\tH\0R\x03STR\x12\
-    \x12\n\x03INT\x18\x16\x20\x01(\x05H\0R\x03INT\x12\x16\n\x05FLOAT\x18\x17\
-    \x20\x01(\x02H\0R\x05FLOAT\x120\n\x04DATE\x18\x1e\x20\x01(\x0b2\x1a.goog\
-    le.protobuf.TimestampH\0R\x04DATE\x128\n\x08DATETIME\x18\x1f\x20\x01(\
-    \x0b2\x1a.google.protobuf.TimestampH\0R\x08DATETIME\x120\n\x04TIME\x18\
-    \x20\x20\x01(\x0b2\x1a.google.protobuf.TimestampH\0R\x04TIME\x12\x16\n\
-    \x05COLOR\x18(\x20\x01(\rH\0R\x05COLORB\x06\n\x04data\"Z\n\x16ConsolePri\
-    ntButtonData\x12,\n\x05value\x18\x01\x20\x01(\x0b2\x16.qni.api.InputResp\
-    onseR\x05value\x12\x12\n\x04text\x18\x02\x20\x01(\tR\x04text\"\xaa\x02\n\
-    \x10ConsolePrintData\x12\x16\n\x05PRINT\x18\n\x20\x01(\tH\0R\x05PRINT\
-    \x12\x1f\n\nPRINT_LINE\x18\x0b\x20\x01(\tH\0R\tPRINTLINE\x12D\n\x0cPRINT\
-    _BUTTON\x18\x0c\x20\x01(\x0b2\x1f.qni.api.ConsolePrintButtonDataH\0R\x0b\
-    PRINTBUTTON\x123\n\x08NEW_LINE\x18\x14\x20\x01(\x0b2\x16.google.protobuf\
-    .EmptyH\0R\x07NEWLINE\x12!\n\x0bDELETE_LINE\x18\x1e\x20\x01(\rH\0R\nDELE\
-    TELINE\x127\n\nCLEAR_LINE\x18\x1f\x20\x01(\x0b2\x16.google.protobuf.Empt\
-    yH\0R\tCLEARLINEB\x06\n\x04data\"c\n\x04Font\x12\x1f\n\x0bfont_family\
-    \x18\x01\x20\x01(\tR\nfontFamily\x12\x1b\n\tfont_size\x18\x02\x20\x01(\
-    \x02R\x08fontSize\x12\x1d\n\nfont_style\x18\x03\x20\x01(\rR\tfontStyle\"\
-    \xe3\x01\n\x12ConsoleSettingItem\x12\x1f\n\nTEXT_COLOR\x18\n\x20\x01(\rH\
-    \0R\tTEXTCOLOR\x12\x1f\n\nBACK_COLOR\x18\x0b\x20\x01(\rH\0R\tBACKCOLOR\
-    \x12)\n\x0fHIGHLIGHT_COLOR\x18\x0c\x20\x01(\rH\0R\x0eHIGHLIGHTCOLOR\x12#\
-    \n\x04FONT\x18\x14\x20\x01(\x0b2\r.qni.api.FontH\0R\x04FONT\x123\n\nTEXT\
-    _ALIGN\x18\x15\x20\x01(\x0e2\x12.qni.api.TextAlignH\0R\tTEXTALIGNB\x06\n\
-    \x04data\"\xd6\x01\n\x0eConsoleRequest\x12\x1f\n\nLOAD_STATE\x18\n\x20\
-    \x01(\tH\0R\tLOADSTATE\x12!\n\x0bSHARE_STATE\x18\x0b\x20\x01(\tH\0R\nSHA\
-    RESTATE\x124\n\x15SHARE_STATE_OVERWRITE\x18\x0c\x20\x01(\tH\0R\x13SHARES\
-    TATEOVERWRITE\x12#\n\x0cDELETE_STATE\x18\r\x20\x01(\tH\0R\x0bDELETESTATE\
-    \x12\x1d\n\tGET_STATE\x18\x14\x20\x01(\x04H\0R\x08GETSTATEB\x06\n\x04dat\
-    a\"\x8d\x01\n\x0fConsoleResponse\x12\x10\n\x03tag\x18\x01\x20\x01(\rR\
-    \x03tag\x123\n\x08OK_INPUT\x18\n\x20\x01(\x0b2\x16.qni.api.InputResponse\
-    H\0R\x07OKINPUT\x12+\n\x03ERR\x18\xff\x01\x20\x01(\x0b2\x16.qni.api.Erro\
-    rResponseH\0R\x03ERRB\x06\n\x04data\"s\n\x0eConsoleMessage\x12+\n\x03REQ\
-    \x18\n\x20\x01(\x0b2\x17.qni.api.ConsoleRequestH\0R\x03REQ\x12,\n\x03RES\
-    \x18\x0b\x20\x01(\x0b2\x18.qni.api.ConsoleResponseH\0R\x03RESB\x06\n\x04\
-    data\"\x91\x01\n\x0eProgramCommand\x121\n\x05PRINT\x18\n\x20\x01(\x0b2\
-    \x19.qni.api.ConsolePrintDataH\0R\x05PRINT\x12D\n\x0eUPDATE_SETTING\x18\
-    \x0b\x20\x01(\x0b2\x1b.qni.api.ConsoleSettingItemH\0R\rUPDATESETTINGB\
-    \x06\n\x04data\"J\n\x13ProgramCommandArray\x123\n\x08commands\x18\x01\
-    \x20\x03(\x0b2\x17.qni.api.ProgramCommandR\x08commands\"Y\n\x0eProgramRe\
-    quest\x12\x10\n\x03tag\x18\x01\x20\x01(\rR\x03tag\x12-\n\x05INPUT\x18\n\
-    \x20\x01(\x0b2\x15.qni.api.InputRequestH\0R\x05INPUTB\x06\n\x04data\"\
-    \xee\x01\n\x0fProgramResponse\x12<\n\rOK_LOAD_STATE\x18\n\x20\x01(\x0b2\
-    \x16.google.protobuf.EmptyH\0R\x0bOKLOADSTATE\x12&\n\x0eOK_SHARE_STATE\
-    \x18\x0b\x20\x01(\tH\0R\x0cOKSHARESTATE\x12@\n\x0cOK_GET_STATE\x18\x0c\
-    \x20\x01(\x0b2\x1c.qni.api.ProgramCommandArrayH\0R\nOKGETSTATE\x12+\n\
-    \x03ERR\x18\xff\x01\x20\x01(\x0b2\x16.qni.api.ErrorResponseH\0R\x03ERRB\
-    \x06\n\x04data\"\x94\x01\n\x0eProgramMessage\x12+\n\x03REQ\x18\n\x20\x01\
-    (\x0b2\x17.qni.api.ProgramRequestH\0R\x03REQ\x12,\n\x03RES\x18\x0b\x20\
-    \x01(\x0b2\x18.qni.api.ProgramResponseH\0R\x03RES\x12\x1f\n\nACCEPT_RES\
-    \x18\x0c\x20\x01(\rH\0R\tACCEPTRESB\x06\n\x04data*=\n\tFontStyle\x12\x0b\
-    \n\x07REGULAR\x10\0\x12\n\n\x06ITALIC\x10\x01\x12\x08\n\x04BOLD\x10\x02\
-    \x12\r\n\tUNDERLINE\x10\x04*,\n\tTextAlign\x12\x08\n\x04LEFT\x10\0\x12\t\
-    \n\x05RIGHT\x10\x01\x12\n\n\x06CENTER\x10\x02b\x06proto3\
+    \n\rqni-api.proto\x12\x07qni.api\x1a\x1egoogle/protobuf/duration.proto\
+    \x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.pro\
+    to\"!\n\x0bStringArray\x12\x12\n\x04data\x18\x01\x20\x03(\tR\x04data\"B\
+    \n\rErrorResponse\x12\x19\n\x08req_type\x18\x01\x20\x01(\tR\x07reqType\
+    \x12\x16\n\x06reason\x18\x02\x20\x01(\tR\x06reason\"\xfb\x05\n\x0cInputR\
+    equest\x122\n\x06expire\x18\x01\x20\x01(\x0b2\x1a.google.protobuf.Timest\
+    ampR\x06expire\x12.\n\x05TOUCH\x18\n\x20\x01(\x0b2\x16.google.protobuf.E\
+    mptyH\0R\x05TOUCH\x12.\n\x05ENTER\x18\x0b\x20\x01(\x0b2\x16.google.proto\
+    buf.EmptyH\0R\x05ENTER\x120\n\x06ANYKEY\x18\x0c\x20\x01(\x0b2\x16.google\
+    .protobuf.EmptyH\0R\x06ANYKEY\x122\n\x07BOOLEAN\x18\r\x20\x01(\x0b2\x16.\
+    google.protobuf.EmptyH\0R\x07BOOLEAN\x12*\n\x03STR\x18\x14\x20\x01(\x0b2\
+    \x16.google.protobuf.EmptyH\0R\x03STR\x12\x20\n\x0bSTR_MAX_LEN\x18\x15\
+    \x20\x01(\rH\0R\tSTRMAXLEN\x125\n\nSTR_SELECT\x18\x16\x20\x01(\x0b2\x14.\
+    qni.api.StringArrayH\0R\tSTRSELECT\x12*\n\x03INT\x18\x1e\x20\x01(\x0b2\
+    \x16.google.protobuf.EmptyH\0R\x03INT\x12\x20\n\x0bINT_MAX_LEN\x18\x1f\
+    \x20\x01(\rH\0R\tINTMAXLEN\x12.\n\x05FLOAT\x18(\x20\x01(\x0b2\x16.google\
+    .protobuf.EmptyH\0R\x05FLOAT\x12$\n\rFLOAT_MAX_LEN\x18)\x20\x01(\rH\0R\
+    \x0bFLOATMAXLEN\x12,\n\x04DATE\x182\x20\x01(\x0b2\x16.google.protobuf.Em\
+    ptyH\0R\x04DATE\x124\n\x08DATETIME\x183\x20\x01(\x0b2\x16.google.protobu\
+    f.EmptyH\0R\x08DATETIME\x12,\n\x04TIME\x184\x20\x01(\x0b2\x16.google.pro\
+    tobuf.EmptyH\0R\x04TIME\x12.\n\x05COLOR\x18<\x20\x01(\x0b2\x16.google.pr\
+    otobuf.EmptyH\0R\x05COLORB\x06\n\x04data\"\xd8\x02\n\rInputResponse\x12.\
+    \n\x05EMPTY\x18\n\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x05EMPTY\
+    \x12\x1a\n\x07BOOLEAN\x18\x14\x20\x01(\x08H\0R\x07BOOLEAN\x12\x12\n\x03S\
+    TR\x18\x15\x20\x01(\tH\0R\x03STR\x12\x12\n\x03INT\x18\x16\x20\x01(\x05H\
+    \0R\x03INT\x12\x16\n\x05FLOAT\x18\x17\x20\x01(\x02H\0R\x05FLOAT\x120\n\
+    \x04DATE\x18\x1e\x20\x01(\x0b2\x1a.google.protobuf.TimestampH\0R\x04DATE\
+    \x128\n\x08DATETIME\x18\x1f\x20\x01(\x0b2\x1a.google.protobuf.TimestampH\
+    \0R\x08DATETIME\x12/\n\x04TIME\x18\x20\x20\x01(\x0b2\x19.google.protobuf\
+    .DurationH\0R\x04TIME\x12\x16\n\x05COLOR\x18(\x20\x01(\rH\0R\x05COLORB\
+    \x06\n\x04data\"Z\n\x16ConsolePrintButtonData\x12,\n\x05value\x18\x01\
+    \x20\x01(\x0b2\x16.qni.api.InputResponseR\x05value\x12\x12\n\x04text\x18\
+    \x02\x20\x01(\tR\x04text\"\xaa\x02\n\x10ConsolePrintData\x12\x16\n\x05PR\
+    INT\x18\n\x20\x01(\tH\0R\x05PRINT\x12\x1f\n\nPRINT_LINE\x18\x0b\x20\x01(\
+    \tH\0R\tPRINTLINE\x12D\n\x0cPRINT_BUTTON\x18\x0c\x20\x01(\x0b2\x1f.qni.a\
+    pi.ConsolePrintButtonDataH\0R\x0bPRINTBUTTON\x123\n\x08NEW_LINE\x18\x14\
+    \x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x07NEWLINE\x12!\n\x0bDELETE\
+    _LINE\x18\x1e\x20\x01(\rH\0R\nDELETELINE\x127\n\nCLEAR_LINE\x18\x1f\x20\
+    \x01(\x0b2\x16.google.protobuf.EmptyH\0R\tCLEARLINEB\x06\n\x04data\"c\n\
+    \x04Font\x12\x1f\n\x0bfont_family\x18\x01\x20\x01(\tR\nfontFamily\x12\
+    \x1b\n\tfont_size\x18\x02\x20\x01(\x02R\x08fontSize\x12\x1d\n\nfont_styl\
+    e\x18\x03\x20\x01(\rR\tfontStyle\"\xe3\x01\n\x12ConsoleSettingItem\x12\
+    \x1f\n\nTEXT_COLOR\x18\n\x20\x01(\rH\0R\tTEXTCOLOR\x12\x1f\n\nBACK_COLOR\
+    \x18\x0b\x20\x01(\rH\0R\tBACKCOLOR\x12)\n\x0fHIGHLIGHT_COLOR\x18\x0c\x20\
+    \x01(\rH\0R\x0eHIGHLIGHTCOLOR\x12#\n\x04FONT\x18\x14\x20\x01(\x0b2\r.qni\
+    .api.FontH\0R\x04FONT\x123\n\nTEXT_ALIGN\x18\x15\x20\x01(\x0e2\x12.qni.a\
+    pi.TextAlignH\0R\tTEXTALIGNB\x06\n\x04data\"\xd6\x01\n\x0eConsoleRequest\
+    \x12\x1f\n\nLOAD_STATE\x18\n\x20\x01(\tH\0R\tLOADSTATE\x12!\n\x0bSHARE_S\
+    TATE\x18\x0b\x20\x01(\tH\0R\nSHARESTATE\x124\n\x15SHARE_STATE_OVERWRITE\
+    \x18\x0c\x20\x01(\tH\0R\x13SHARESTATEOVERWRITE\x12#\n\x0cDELETE_STATE\
+    \x18\r\x20\x01(\tH\0R\x0bDELETESTATE\x12\x1d\n\tGET_STATE\x18\x14\x20\
+    \x01(\x04H\0R\x08GETSTATEB\x06\n\x04data\"\x8d\x01\n\x0fConsoleResponse\
+    \x12\x10\n\x03tag\x18\x01\x20\x01(\rR\x03tag\x123\n\x08OK_INPUT\x18\n\
+    \x20\x01(\x0b2\x16.qni.api.InputResponseH\0R\x07OKINPUT\x12+\n\x03ERR\
+    \x18\xff\x01\x20\x01(\x0b2\x16.qni.api.ErrorResponseH\0R\x03ERRB\x06\n\
+    \x04data\"s\n\x0eConsoleMessage\x12+\n\x03REQ\x18\n\x20\x01(\x0b2\x17.qn\
+    i.api.ConsoleRequestH\0R\x03REQ\x12,\n\x03RES\x18\x0b\x20\x01(\x0b2\x18.\
+    qni.api.ConsoleResponseH\0R\x03RESB\x06\n\x04data\"\x91\x01\n\x0eProgram\
+    Command\x121\n\x05PRINT\x18\n\x20\x01(\x0b2\x19.qni.api.ConsolePrintData\
+    H\0R\x05PRINT\x12D\n\x0eUPDATE_SETTING\x18\x0b\x20\x01(\x0b2\x1b.qni.api\
+    .ConsoleSettingItemH\0R\rUPDATESETTINGB\x06\n\x04data\"J\n\x13ProgramCom\
+    mandArray\x123\n\x08commands\x18\x01\x20\x03(\x0b2\x17.qni.api.ProgramCo\
+    mmandR\x08commands\"Y\n\x0eProgramRequest\x12\x10\n\x03tag\x18\x01\x20\
+    \x01(\rR\x03tag\x12-\n\x05INPUT\x18\n\x20\x01(\x0b2\x15.qni.api.InputReq\
+    uestH\0R\x05INPUTB\x06\n\x04data\"\xee\x01\n\x0fProgramResponse\x12<\n\r\
+    OK_LOAD_STATE\x18\n\x20\x01(\x0b2\x16.google.protobuf.EmptyH\0R\x0bOKLOA\
+    DSTATE\x12&\n\x0eOK_SHARE_STATE\x18\x0b\x20\x01(\tH\0R\x0cOKSHARESTATE\
+    \x12@\n\x0cOK_GET_STATE\x18\x0c\x20\x01(\x0b2\x1c.qni.api.ProgramCommand\
+    ArrayH\0R\nOKGETSTATE\x12+\n\x03ERR\x18\xff\x01\x20\x01(\x0b2\x16.qni.ap\
+    i.ErrorResponseH\0R\x03ERRB\x06\n\x04data\"\x94\x01\n\x0eProgramMessage\
+    \x12+\n\x03REQ\x18\n\x20\x01(\x0b2\x17.qni.api.ProgramRequestH\0R\x03REQ\
+    \x12,\n\x03RES\x18\x0b\x20\x01(\x0b2\x18.qni.api.ProgramResponseH\0R\x03\
+    RES\x12\x1f\n\nACCEPT_RES\x18\x0c\x20\x01(\rH\0R\tACCEPTRESB\x06\n\x04da\
+    ta*=\n\tFontStyle\x12\x0b\n\x07REGULAR\x10\0\x12\n\n\x06ITALIC\x10\x01\
+    \x12\x08\n\x04BOLD\x10\x02\x12\r\n\tUNDERLINE\x10\x04*,\n\tTextAlign\x12\
+    \x08\n\x04LEFT\x10\0\x12\t\n\x05RIGHT\x10\x01\x12\n\n\x06CENTER\x10\x02b\
+    \x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
