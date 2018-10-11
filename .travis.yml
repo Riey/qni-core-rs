@@ -11,7 +11,7 @@ addons:
     - sourceline: "ppa:maarten-fonville/protobuf"
     
     packages:
-    - protobuf
+    - protobuf-compiler
     
 
 git:
