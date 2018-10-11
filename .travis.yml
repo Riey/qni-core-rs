@@ -5,6 +5,11 @@ rust:
   - beta
   - nightly
 
+before_install:
+  - sudo add-apt-repository ppa:maarten-fonville/protobuf -y
+  - sudo apt-get update -q
+  - sudo apt-get install -y protobuf
+
 git:
   depth: 1
 
@@ -17,8 +22,3 @@ matrix:
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
-
-addons:
-  apt:
-    packages:
-      - protobuf-compiler
