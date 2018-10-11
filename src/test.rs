@@ -58,10 +58,10 @@ fn api_wait_test() {
         input_req.mut_INPUT().mut_INT();
         input_req.set_tag(0);
 
-        let mut send_rx = ctx.get_send_rx();
+        let mut connector_ctx = ConnectorContext::new(hub.read(), ctx.clone());
 
         loop {
-            match send_rx.try_recv() {
+            match connector_ctx.try_recv_send_messge() {
                 Ok(send_msg) => {
                     assert_eq!(msg, protobuf::parse_from_bytes(&send_msg).unwrap());
                     break;
@@ -78,7 +78,7 @@ fn api_wait_test() {
 
         input_res.mut_OK_INPUT().set_INT(100);
 
-        ctx.clone_reponse_tx().try_send(input_res.clone()).unwrap();
+        assert_eq!(connector_ctx.recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()), None);
 
         loop {
             if ctx.need_exit() {

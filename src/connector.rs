@@ -1,4 +1,4 @@
-use std::sync::{mpsc::TrySendError, Arc, Mutex};
+use std::sync::{mpsc::{TryRecvError, TrySendError}, Arc, Mutex};
 
 use crate::console::ConsoleContext;
 use crate::hub::Hub;
@@ -99,6 +99,10 @@ impl ConnectorContext {
         } else {
             None
         }
+    }
+
+    pub fn try_recv_send_messge(&mut self) -> Result<Vec<u8>, TryRecvError> {
+        self.send_rx.try_recv()
     }
 
     pub fn recv_message(&mut self, msg: &[u8]) -> Option<Vec<u8>> {
