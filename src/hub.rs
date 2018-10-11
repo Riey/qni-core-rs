@@ -4,8 +4,9 @@ use std::thread;
 
 use crate::console::ConsoleContext;
 
-pub type ProgramEntryCtxArg = *mut Arc<Mutex<ConsoleContext>>;
+pub type ProgramEntryCtxArg = *mut Arc<ConsoleContext>;
 pub type ProgramEntryFuncPtr = fn(ProgramEntryCtxArg) -> ();
+pub type SharedHubPtr = *mut Arc<Mutex<Hub>>;
 
 #[derive(Copy, Clone)]
 pub struct ProgramEntryCallback(pub ProgramEntryFuncPtr);
@@ -15,7 +16,7 @@ unsafe impl Sync for ProgramEntryCallback {}
 
 pub struct Hub {
     entry: ProgramEntryCallback,
-    shared_ctxs: BTreeMap<String, Arc<Mutex<ConsoleContext>>>,
+    shared_ctxs: BTreeMap<String, Arc<ConsoleContext>>,
     exit_flag: bool,
 }
 
@@ -28,9 +29,9 @@ impl Hub {
         }
     }
 
-    pub fn on_console_ctx_removed(ctx: &Arc<Mutex<ConsoleContext>>) {
+    pub fn on_console_ctx_removed(ctx: &Arc<ConsoleContext>) {
         if Arc::strong_count(ctx) <= 2 {
-            ctx.lock().unwrap().set_exit();
+            ctx.set_exit();
         }
     }
 
@@ -42,8 +43,8 @@ impl Hub {
         self.exit_flag = true;
     }
 
-    pub fn start_new_program(&self) -> Arc<Mutex<ConsoleContext>> {
-        let ctx = Arc::new(Mutex::new(ConsoleContext::new()));
+    pub fn start_new_program(&self) -> Arc<ConsoleContext> {
+        let ctx = Arc::new(ConsoleContext::new());
 
         {
             let entry = self.entry;
@@ -53,7 +54,7 @@ impl Hub {
                 let ctx_box = Box::new(ctx.clone());
                 entry.0(Box::into_raw(ctx_box));
 
-                ctx.lock().unwrap().set_exit();
+                ctx.set_exit();
             });
         }
 
@@ -63,7 +64,7 @@ impl Hub {
     pub fn insert_ctx(
         &mut self,
         key: String,
-        ctx: &Arc<Mutex<ConsoleContext>>,
+        ctx: &Arc<ConsoleContext>,
         overwrite: bool,
     ) -> bool {
         match overwrite {
@@ -97,7 +98,7 @@ impl Hub {
         }
     }
 
-    pub fn get_ctx(&self, key: &str) -> Option<Arc<Mutex<ConsoleContext>>> {
+    pub fn get_ctx(&self, key: &str) -> Option<Arc<ConsoleContext>> {
         match self.shared_ctxs.get(key) {
             Some(ctx) => Some(ctx.clone()),
             None => None,

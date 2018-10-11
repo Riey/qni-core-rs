@@ -1,106 +1,103 @@
+use bus::{Bus, BusReader};
 use crate::protos::qni_api::*;
 use multiqueue::*;
 use protobuf::{Message, RepeatedField};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TrySendError};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::mpsc::TryRecvError;
+use std::sync::{Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
 pub struct ConsoleContext {
-    commands: Vec<ProgramCommand>,
-    send_tx: MPMCSender<Vec<u8>>,
-    send_rx: MPMCReceiver<Vec<u8>>,
-    response_tx: Sender<ConsoleResponse>,
-    response_rx: Receiver<ConsoleResponse>,
-    exit_flag: bool,
+    commands: RwLock<Vec<ProgramCommand>>,
+    send_bus: Mutex<Bus<Vec<u8>>>,
+    response_tx: Mutex<MPMCSender<ConsoleResponse>>,
+    response_rx: Mutex<MPMCReceiver<ConsoleResponse>>,
+    exit_flag: AtomicBool,
+    input_tag: AtomicU32,
 }
 
 impl ConsoleContext {
     pub fn new() -> Self {
-        let (send_tx, send_rx) = mpmc_queue(10);
-        let (response_tx, response_rx) = mpsc::channel();
+        let send_bus = Mutex::new(Bus::new(10));
+        let (response_tx, response_rx) = mpmc_queue(10);
 
         Self {
             commands: Default::default(),
-            exit_flag: false,
-            send_tx,
-            send_rx,
-            response_tx,
-            response_rx,
+            exit_flag: AtomicBool::new(false),
+            send_bus,
+            response_tx: Mutex::new(response_tx),
+            response_rx: Mutex::new(response_rx),
+            input_tag: AtomicU32::new(0),
         }
     }
 
     pub fn need_exit(&self) -> bool {
-        self.exit_flag
+        self.exit_flag.load(Ordering::Relaxed)
     }
 
-    pub fn set_exit(&mut self) {
-        self.exit_flag = true;
+    pub fn set_exit(&self) {
+        self.exit_flag.store(true, Ordering::Relaxed)
     }
 
-    pub fn clone_send_rx(&self) -> MPMCReceiver<Vec<u8>> {
-        self.send_rx.clone()
+    pub fn get_send_rx(&self) -> BusReader<Vec<u8>> {
+        self.send_bus.lock().unwrap().add_rx()
     }
 
-    pub fn clone_reponse_tx(&self) -> Sender<ConsoleResponse> {
-        self.response_tx.clone()
+    pub fn clone_reponse_tx(&self) -> MPMCSender<ConsoleResponse> {
+        self.response_tx.lock().unwrap().clone()
     }
 
-    pub fn append_command(&mut self, command: ProgramCommand) {
-        self.commands.push(command);
+    pub fn append_command(&self, command: ProgramCommand) {
+        self.commands.write().unwrap().push(command);
     }
 
     pub fn export_command(&self, from: usize) -> ProgramCommandArray {
         let mut arr = ProgramCommandArray::new();
 
-        arr.set_commands(RepeatedField::from_slice(&self.commands[from..]));
+        arr.set_commands(RepeatedField::from_slice(
+            &self.commands.read().unwrap()[from..],
+        ));
 
         arr
     }
 
     pub fn get_command_count(&self) -> usize {
-        self.commands.len()
+        self.commands.read().unwrap().len()
+    }
+
+    pub fn get_next_input_tag(&self) -> u32 {
+        self.input_tag.fetch_add(1, Ordering::Relaxed)
     }
 
     pub fn wait_console<F: FnMut(&mut ConsoleResponse) -> bool>(
         &self,
-        req: ProgramRequest,
+        mut req: ProgramRequest,
         mut pred: F,
     ) {
         {
+            req.set_tag(self.get_next_input_tag());
             let mut msg = ProgramMessage::new();
             msg.set_REQ(req);
 
-            let mut dat = Message::write_to_bytes(&msg).expect("serialize");
+            let dat = Message::write_to_bytes(&msg).expect("serialize");
 
-            loop {
-                match self.send_tx.try_send(dat) {
-                    Ok(()) => break,
-                    Err(TrySendError::Disconnected(_)) => {
-                        panic!("queue disconnected");
-                    }
-                    Err(TrySendError::Full(prev_dat)) => {
-                        dat = prev_dat;
-                    }
-                }
-                thread::sleep(Duration::from_millis(200));
-            }
+            self.send_bus.lock().unwrap().broadcast(dat);
         }
 
         loop {
-            let res = self.response_rx.recv_timeout(Duration::from_millis(200));
-
-            match res {
+            match self.response_rx.lock().unwrap().try_recv() {
                 Ok(mut res) => {
                     if pred(&mut res) {
                         break;
                     }
                 }
 
-                Err(RecvTimeoutError::Disconnected) => {
+                Err(TryRecvError::Disconnected) => {
                     panic!("queue disconnected");
                 }
 
-                Err(RecvTimeoutError::Timeout) => {}
+                Err(TryRecvError::Empty) => {}
             };
 
             //TODO: implement timeout

@@ -1,41 +1,33 @@
-use std::sync::{mpsc::Sender, Arc, Mutex};
+use std::sync::{mpsc::TrySendError, Arc, Mutex};
 
 use crate::console::ConsoleContext;
 use crate::hub::Hub;
 use crate::protos::qni_api::*;
-use multiqueue::MPMCReceiver;
+use multiqueue::MPMCSender;
 use protobuf::Message;
+use std;
+use bus::BusReader;
 
 pub struct ConnectorContext {
     hub: Arc<Mutex<Hub>>,
-    console_ctx: Arc<Mutex<ConsoleContext>>,
-    send_rx: MPMCReceiver<Vec<u8>>,
-    response_tx: Sender<ConsoleResponse>,
+    console_ctx: Arc<ConsoleContext>,
+    send_rx: BusReader<Vec<u8>>,
+    response_tx: MPMCSender<ConsoleResponse>,
 }
 
 impl ConnectorContext {
-    pub fn new(hub: Arc<Mutex<Hub>>, console_ctx: Arc<Mutex<ConsoleContext>>) -> Self {
-        let (send_rx, response_tx) = {
-            let ctx = console_ctx.lock().unwrap();
-
-            (ctx.clone_send_rx(), ctx.clone_reponse_tx())
-        };
-
+    pub fn new(hub: Arc<Mutex<Hub>>, console_ctx: Arc<ConsoleContext>) -> Self {
         Self {
             hub,
-            send_rx,
-            response_tx,
+            send_rx: console_ctx.get_send_rx(),
+            response_tx: console_ctx.clone_reponse_tx(),
             console_ctx,
         }
     }
 
-    pub fn update_console_ctx(&mut self, console_ctx: Arc<Mutex<ConsoleContext>>) {
-        {
-            let ctx = console_ctx.lock().unwrap();
-            self.send_rx = ctx.clone_send_rx();
-            self.response_tx = ctx.clone_reponse_tx();
-        }
-
+    pub fn update_console_ctx(&mut self, console_ctx: Arc<ConsoleContext>) {
+        self.send_rx = console_ctx.get_send_rx();
+        self.response_tx = console_ctx.clone_reponse_tx();
         self.console_ctx = console_ctx;
     }
 
@@ -45,7 +37,7 @@ impl ConnectorContext {
 
             match req_data {
                 ConsoleRequest_oneof_data::GET_STATE(from) => {
-                    let ctx = self.console_ctx.lock().unwrap();
+                    let ctx = &self.console_ctx;
 
                     let from = from as usize;
 
@@ -115,7 +107,23 @@ impl ConnectorContext {
                 if msg.has_REQ() {
                     self.process_request(msg.take_REQ())
                 } else if msg.has_RES() {
-                    self.response_tx.send(msg.take_RES()).unwrap();
+                    let mut res = msg.take_RES();
+                    loop {
+                        match self.response_tx.try_send(res) {
+                            Ok(_) => break,
+                            Err(TrySendError::Full(left_res)) => {
+                                res = left_res;
+                            }
+                            Err(TrySendError::Disconnected(_)) => {
+                                return None;
+                            }
+                        }
+                        if self.response_tx.try_send(msg.take_RES()).is_ok() {
+                            break;
+                        }
+
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
                     None
                 } else {
                     None

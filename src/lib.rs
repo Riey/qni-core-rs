@@ -1,3 +1,5 @@
+#![feature(integer_atomics)]
+
 pub mod connector;
 pub mod console;
 pub mod hub;
