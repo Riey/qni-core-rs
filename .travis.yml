@@ -12,6 +12,7 @@ addons:
     
     packages:
     - protobuf-compiler
+    - libprotoc-dev
     
 
 git:
