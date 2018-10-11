@@ -1,0 +1,19 @@
+language: rust
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+git:
+  depth: 1
+
+cache: cargo
+
+matrix:
+  allow_failures:
+    - rust: stable
+
+script:
+  - cargo build --verbose --all
+  - cargo test --verbose --all
