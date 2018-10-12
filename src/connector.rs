@@ -7,6 +7,7 @@ use multiqueue::MPMCSender;
 use protobuf::Message;
 use std;
 use bus::BusReader;
+use log::{error, debug};
 
 pub struct ConnectorContext {
     hub: Arc<Mutex<Hub>>,
@@ -108,6 +109,8 @@ impl ConnectorContext {
     pub fn recv_message(&mut self, msg: &[u8]) -> Option<Vec<u8>> {
         match protobuf::parse_from_bytes::<ConsoleMessage>(msg) {
             Ok(mut msg) => {
+                debug!("received: {:#?}", msg);
+
                 if msg.has_REQ() {
                     self.process_request(msg.take_REQ())
                 } else if msg.has_RES() {
@@ -133,7 +136,11 @@ impl ConnectorContext {
                     None
                 }
             }
-            _ => None,
+            Err(err) => {
+                error!("failed to read msg: {}", err);
+
+                None
+            },
         }
     }
 }

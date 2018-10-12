@@ -16,5 +16,4 @@ pub mod prelude {
     pub use crate::console::*;
     pub use crate::hub::*;
     pub use crate::protos::qni_api;
-    pub use protobuf;
 }

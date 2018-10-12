@@ -8,7 +8,7 @@ edition = "2018"
 protoc-rust = "2.0"
 
 [dependencies]
-libc = "*"
+log = "*"
 protobuf = "*"
 multiqueue = "*"
 bus = "*"
