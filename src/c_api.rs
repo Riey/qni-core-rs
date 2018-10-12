@@ -61,6 +61,33 @@ pub unsafe extern "C" fn qni_print_line(
     0
 }
 
+pub unsafe extern "C" fn qni_new_line(
+    ctx: ProgramEntryCtxArg
+) -> i32 {
+    program_command!(ctx, {
+        let mut command = ProgramCommand::new();
+        command.mut_PRINT().mut_NEW_LINE();
+
+        ctx.append_command(command);
+    });
+
+    0
+}
+
+pub unsafe extern "C" fn qni_delete_line(
+    ctx: ProgramEntryCtxArg,
+    count: u32
+) -> i32 {
+    program_command!(ctx, {
+        let mut command = ProgramCommand::new();
+        command.mut_PRINT().set_DELETE_LINE(count);
+
+        ctx.append_command(command);
+    });
+
+    0
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_font(
     ctx: ProgramEntryCtxArg,
