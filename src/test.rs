@@ -6,22 +6,11 @@ unsafe fn qni_print_line_rust(ctx: ProgramEntryCtxArg, text: &str) {
     qni_print_line(ctx, text.as_ptr(), text.len());
 }
 
-fn test_simple_entry(ctx: ProgramEntryCtxArg) {
+extern "C" fn test_simple_entry(ctx: ProgramEntryCtxArg) {
     unsafe {
         qni_print_line_rust(ctx, "Hello, world!");
         qni_print_line_rust(ctx, "Hello, world!");
     }
-}
-
-#[test]
-fn auto_exit_test() {
-    let mut hub = Hub::new(ProgramEntryCallback(test_wait_entry));
-
-    let ctx = hub.start_new_program();
-
-    Hub::on_console_ctx_removed(&ctx);
-
-    assert_eq!(true, ctx.need_exit());
 }
 
 use std::thread;
@@ -32,7 +21,7 @@ fn api_simple_test() {
     unsafe {
         let hub = { qni_hub_new(test_simple_entry) };
 
-        let ctx = (*hub).lock().unwrap().start_new_program();
+        let ctx = (*hub).start_new_program();
 
         loop {
             if ctx.need_exit() {
@@ -48,9 +37,11 @@ fn api_simple_test() {
     }
 }
 
-fn test_wait_entry(ctx: ProgramEntryCtxArg) {
+extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
     unsafe {
-        assert_eq!(100, qni_wait_int(ctx));
+        let mut ret = 0;
+        assert_eq!(0, qni_wait_int(ctx, &mut ret));
+        assert_eq!(100, ret);
     }
 }
 
@@ -61,7 +52,7 @@ fn api_wait_test() {
     unsafe {
         let hub = { qni_hub_new(test_wait_entry) };
 
-        let ctx = (*hub).lock().unwrap().start_new_program();
+        let ctx = (*hub).start_new_program();
 
         let mut msg = ProgramMessage::new();
         let input_req = msg.mut_REQ();
@@ -89,7 +80,10 @@ fn api_wait_test() {
 
         input_res.mut_OK_INPUT().set_INT(100);
 
-        assert_eq!(connector_ctx.recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()), None);
+        assert_eq!(
+            connector_ctx.recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()),
+            None
+        );
 
         loop {
             if ctx.need_exit() {
