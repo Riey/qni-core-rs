@@ -32,6 +32,10 @@ impl ConnectorContext {
         self.console_ctx = console_ctx;
     }
 
+    pub fn need_exit(&self) -> bool {
+        self.hub.lock().unwrap().need_exit()
+    }
+
     fn process_request(&mut self, req: ConsoleRequest) -> Option<Vec<u8>> {
         if let Some(req_data) = req.data {
             let mut msg = ProgramMessage::new();
