@@ -61,6 +61,7 @@ pub unsafe extern "C" fn qni_print_line(
     0
 }
 
+#[no_mangle]
 pub unsafe extern "C" fn qni_new_line(
     ctx: ProgramEntryCtxArg
 ) -> i32 {
@@ -74,6 +75,7 @@ pub unsafe extern "C" fn qni_new_line(
     0
 }
 
+#[no_mangle]
 pub unsafe extern "C" fn qni_delete_line(
     ctx: ProgramEntryCtxArg,
     count: u32
