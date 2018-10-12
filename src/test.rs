@@ -13,6 +13,17 @@ fn test_simple_entry(ctx: ProgramEntryCtxArg) {
     }
 }
 
+#[test]
+fn auto_exit_test() {
+    let mut hub = Hub::new(ProgramEntryCallback(test_wait_entry));
+
+    let ctx = hub.start_new_program();
+
+    Hub::on_console_ctx_removed(&ctx);
+
+    assert_eq!(true, ctx.need_exit());
+}
+
 use std::thread;
 use std::time::Duration;
 
