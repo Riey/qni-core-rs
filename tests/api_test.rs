@@ -1,6 +1,6 @@
-use crate::c_api::*;
-use crate::prelude::qni_api::*;
-use crate::prelude::*;
+use qni_core_rs::c_api::*;
+use qni_core_rs::prelude::qni_api::*;
+use qni_core_rs::prelude::*;
 
 unsafe fn qni_print_line_rust(ctx: ProgramEntryCtxArg, text: &str) {
     qni_print_line(ctx, text.as_ptr(), text.len());
