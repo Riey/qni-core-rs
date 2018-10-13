@@ -96,6 +96,8 @@ impl ConnectorContext {
                 }
             }
 
+            debug!("response: {:#?}", msg);
+
             Some(Message::write_to_bytes(&msg).expect("serialize"))
         } else {
             None
@@ -112,11 +114,7 @@ impl ConnectorContext {
                 debug!("received: {:#?}", msg);
 
                 if msg.has_REQ() {
-                    let res = self.process_request(msg.take_REQ());
-
-                    debug!("send: {:#?}", res);
-
-                    res
+                    self.process_request(msg.take_REQ())
                 } else if msg.has_RES() {
                     let mut res = msg.take_RES();
                     loop {
