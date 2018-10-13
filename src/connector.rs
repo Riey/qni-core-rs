@@ -112,7 +112,11 @@ impl ConnectorContext {
                 debug!("received: {:#?}", msg);
 
                 if msg.has_REQ() {
-                    self.process_request(msg.take_REQ())
+                    let res = self.process_request(msg.take_REQ());
+
+                    debug!("send: {:#?}", res);
+
+                    res
                 } else if msg.has_RES() {
                     let mut res = msg.take_RES();
                     loop {
