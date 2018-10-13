@@ -2,3 +2,4 @@
 **/*.rs.bk
 Cargo.lock
 .idea/workspace.xml
+src/protos/qni_api.rs
