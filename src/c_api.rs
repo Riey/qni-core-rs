@@ -20,31 +20,22 @@ pub unsafe extern "C" fn qni_hub_exit(hub: SharedHubPtr) {
     (*hub).set_exit();
 }
 
-macro_rules! program_command {
-    ($ctx: ident, $stmts: block) => {
-        match (*$ctx).upgrade() {
-            Some($ctx) => {
-                $stmts
-            }
-            None => return -1,
-        }
-    };
-}
-
 use std::str;
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_print(ctx: ProgramEntryCtxArg, text: *const u8, len: usize) -> i32 {
 
-    program_command!(ctx, {
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
         let text = str::from_utf8_unchecked(slice::from_raw_parts(text, len));
         command.mut_PRINT().set_PRINT(text.into());
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
@@ -53,29 +44,33 @@ pub unsafe extern "C" fn qni_print_line(
     text: *const u8,
     len: usize,
 ) -> i32 {
-    program_command!(ctx, {
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
         let text = str::from_utf8_unchecked(slice::from_raw_parts(text, len));
         command.mut_PRINT().set_PRINT_LINE(text.into());
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_new_line(
     ctx: ProgramEntryCtxArg
 ) -> i32 {
-    program_command!(ctx, {
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
         command.mut_PRINT().mut_NEW_LINE();
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
@@ -83,14 +78,16 @@ pub unsafe extern "C" fn qni_delete_line(
     ctx: ProgramEntryCtxArg,
     count: u32
 ) -> i32 {
-    program_command!(ctx, {
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
         command.mut_PRINT().set_DELETE_LINE(count);
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
@@ -101,7 +98,9 @@ pub unsafe extern "C" fn qni_set_font(
     font_size: f32,
     font_style: u32,
 ) -> i32 {
-    program_command!(ctx, {
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
 
         let mut font = Font::new();
@@ -114,72 +113,81 @@ pub unsafe extern "C" fn qni_set_font(
 
         command.mut_UPDATE_SETTING().set_FONT(font);
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_text_align(ctx: ProgramEntryCtxArg, text_align: u32) -> i32 {
 
-    program_command!(ctx, {
-
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
 
         command
             .mut_UPDATE_SETTING()
             .set_TEXT_ALIGN(mem::transmute(text_align as u8));
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_text_color(ctx: ProgramEntryCtxArg, color: u32) -> i32 {
-    program_command!(ctx, {
 
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
         command.mut_UPDATE_SETTING().set_TEXT_COLOR(color);
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_back_color(ctx: ProgramEntryCtxArg, color: u32) -> i32 {
-    program_command!(ctx, {
 
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
         command.mut_UPDATE_SETTING().set_BACK_COLOR(color);
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_highlight_color(ctx: ProgramEntryCtxArg, color: u32) -> i32 {
-    program_command!(ctx, {
 
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut command = ProgramCommand::new();
         command.mut_UPDATE_SETTING().set_HIGHLIGHT_COLOR(color);
 
-        ctx.append_command(command);
-    });
+        (*ctx).append_command(command);
 
-    0
+        0
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_wait_int(ctx: ProgramEntryCtxArg, ret: *mut i32) -> i32 {
-    program_command!(ctx, {
 
+    if Arc::strong_count(&*ctx) == 1 {
+        -1
+    } else {
         let mut req = ProgramRequest::new();
         req.mut_INPUT().mut_INT();
 
@@ -196,7 +204,7 @@ pub unsafe extern "C" fn qni_wait_int(ctx: ProgramEntryCtxArg, ret: *mut i32) ->
                 _ => false,
             }
         });
-    });
 
-    0
+        0
+    }
 }

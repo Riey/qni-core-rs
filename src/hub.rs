@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, RwLock, Weak,
+    Arc, RwLock,
 };
 use std::thread;
 
 use crate::console::ConsoleContext;
 
-pub type ProgramEntryCtxArg = *mut Weak<ConsoleContext>;
+pub type ProgramEntryCtxArg = *mut Arc<ConsoleContext>;
 pub type ProgramEntryFuncPtr = extern "C" fn(ProgramEntryCtxArg) -> ();
 pub type SharedHubPtr = *mut Arc<Hub>;
 
@@ -45,15 +45,13 @@ impl Hub {
 
         {
             let entry = self.entry;
-            let ctx = Arc::downgrade(&ctx);
+            let ctx = ctx.clone();
 
             thread::spawn(move || {
                 let ctx_box = Box::new(ctx.clone());
                 entry.0(Box::into_raw(ctx_box));
 
-                if let Some(ctx) = ctx.upgrade() {
-                    ctx.set_exit();
-                }
+                ctx.set_exit();
             });
         }
 
