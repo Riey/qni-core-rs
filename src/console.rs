@@ -8,6 +8,11 @@ use std::sync::{Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
+pub enum WaitError {
+    Timeout,
+    Exited,
+}
+
 pub struct ConsoleContext {
     commands: RwLock<Vec<ProgramCommand>>,
     send_bus: Mutex<Bus<Vec<u8>>>,
@@ -74,7 +79,7 @@ impl ConsoleContext {
         &self,
         mut req: ProgramRequest,
         mut pred: F,
-    ) {
+    ) -> Result<(), WaitError> {
         let tag = self.get_next_input_tag();
         let mut msg = ProgramMessage::new();
 
@@ -90,6 +95,11 @@ impl ConsoleContext {
         }
 
         loop {
+
+            if self.need_exit() {
+                return Err(WaitError::Exited)
+            }
+
             match self.response_rx.lock().unwrap().try_recv() {
                 Ok(mut res) => {
                     if pred(&mut res) {
@@ -114,5 +124,7 @@ impl ConsoleContext {
         let dat = Message::write_to_bytes(&msg).expect("serialzie");
 
         self.send_bus.lock().unwrap().broadcast(dat);
+
+        Ok(())
     }
 }

@@ -1,6 +1,48 @@
-use qni_core_rs::c_api::*;
-use qni_core_rs::prelude::qni_api::*;
-use qni_core_rs::prelude::*;
+use crate::c_api::*;
+use crate::prelude::qni_api::*;
+use crate::prelude::*;
+
+static mut EXIT_FLAG: bool = false;
+static mut EXIT_VALUE: i32 = 0;
+
+extern "C" fn test_exit_entry(ctx: ProgramEntryCtxArg) {
+    unsafe {
+        let mut ret = 0;
+
+        EXIT_FLAG = true;
+
+        EXIT_VALUE = qni_wait_int(ctx, &mut ret);
+    }
+}
+
+#[test]
+fn api_exit_test() {
+    unsafe {
+        let hub = qni_hub_new(test_exit_entry);
+
+        let ctx = (*hub).start_new_program();
+
+        loop {
+            if EXIT_FLAG {
+                break;
+            }
+
+            thread::sleep(Duration::from_millis(20));
+        }
+
+        ctx.set_exit();
+
+        loop {
+            if EXIT_VALUE != 0 {
+                break;
+            }
+
+            thread::sleep(Duration::from_millis(20));
+        }
+
+        assert_eq!(-1, EXIT_VALUE);
+    }
+}
 
 unsafe fn qni_print_line_rust(ctx: ProgramEntryCtxArg, text: &str) {
     assert_eq!(0, qni_print_line(ctx, text.as_ptr(), text.len()));
@@ -13,9 +55,9 @@ extern "C" fn test_simple_entry(ctx: ProgramEntryCtxArg) {
     }
 }
 
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use std::sync::Arc;
 
 #[test]
 fn api_hub_ref_count_test() {
@@ -35,7 +77,7 @@ fn api_hub_ref_count_test() {
 #[test]
 fn api_simple_test() {
     unsafe {
-        let hub = { qni_hub_new(test_simple_entry) };
+        let hub = qni_hub_new(test_simple_entry);
 
         let ctx = (*hub).start_new_program();
 
@@ -66,7 +108,7 @@ use std::sync::mpsc::TryRecvError;
 #[test]
 fn api_wait_test() {
     unsafe {
-        let hub = { qni_hub_new(test_wait_entry) };
+        let hub = qni_hub_new(test_wait_entry);
 
         let ctx = (*hub).start_new_program();
 

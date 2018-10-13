@@ -1,8 +1,9 @@
+use crate::console::WaitError;
 use crate::hub::*;
 use crate::protos::qni_api::*;
 
-use std::slice;
 use std::mem;
+use std::slice;
 use std::sync::Arc;
 
 #[no_mangle]
@@ -24,7 +25,6 @@ use std::str;
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_print(ctx: ProgramEntryCtxArg, text: *const u8, len: usize) -> i32 {
-
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
@@ -58,9 +58,7 @@ pub unsafe extern "C" fn qni_print_line(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_new_line(
-    ctx: ProgramEntryCtxArg
-) -> i32 {
+pub unsafe extern "C" fn qni_new_line(ctx: ProgramEntryCtxArg) -> i32 {
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
@@ -74,10 +72,7 @@ pub unsafe extern "C" fn qni_new_line(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_delete_line(
-    ctx: ProgramEntryCtxArg,
-    count: u32
-) -> i32 {
+pub unsafe extern "C" fn qni_delete_line(ctx: ProgramEntryCtxArg, count: u32) -> i32 {
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
@@ -105,9 +100,9 @@ pub unsafe extern "C" fn qni_set_font(
 
         let mut font = Font::new();
 
-        font.set_font_family(str::from_utf8_unchecked(
-            slice::from_raw_parts(font_family, font_family_len),
-        ).into());
+        font.set_font_family(
+            str::from_utf8_unchecked(slice::from_raw_parts(font_family, font_family_len)).into(),
+        );
         font.set_font_size(font_size);
         font.set_font_style(font_style);
 
@@ -121,7 +116,6 @@ pub unsafe extern "C" fn qni_set_font(
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_text_align(ctx: ProgramEntryCtxArg, text_align: u32) -> i32 {
-
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
@@ -139,7 +133,6 @@ pub unsafe extern "C" fn qni_set_text_align(ctx: ProgramEntryCtxArg, text_align:
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_text_color(ctx: ProgramEntryCtxArg, color: u32) -> i32 {
-
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
@@ -154,7 +147,6 @@ pub unsafe extern "C" fn qni_set_text_color(ctx: ProgramEntryCtxArg, color: u32)
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_back_color(ctx: ProgramEntryCtxArg, color: u32) -> i32 {
-
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
@@ -169,7 +161,6 @@ pub unsafe extern "C" fn qni_set_back_color(ctx: ProgramEntryCtxArg, color: u32)
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_highlight_color(ctx: ProgramEntryCtxArg, color: u32) -> i32 {
-
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
@@ -184,14 +175,13 @@ pub unsafe extern "C" fn qni_set_highlight_color(ctx: ProgramEntryCtxArg, color:
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_wait_int(ctx: ProgramEntryCtxArg, ret: *mut i32) -> i32 {
-
     if Arc::strong_count(&*ctx) == 1 {
         -1
     } else {
         let mut req = ProgramRequest::new();
         req.mut_INPUT().mut_INT();
 
-        (*ctx).wait_console(req, |res| {
+        match (*ctx).wait_console(req, |res| {
             if !res.has_OK_INPUT() {
                 return false;
             }
@@ -203,8 +193,10 @@ pub unsafe extern "C" fn qni_wait_int(ctx: ProgramEntryCtxArg, ret: *mut i32) ->
                 }
                 _ => false,
             }
-        });
-
-        0
+        }) {
+            Ok(_) => 0,
+            Err(WaitError::Exited) => -1,
+            Err(WaitError::Timeout) => 1,
+        }
     }
 }

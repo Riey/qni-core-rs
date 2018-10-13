@@ -7,6 +7,9 @@ pub mod protos;
 
 pub mod c_api;
 
+#[cfg(test)]
+mod test;
+
 pub mod prelude {
     pub use crate::c_api;
     pub use crate::connector::*;
