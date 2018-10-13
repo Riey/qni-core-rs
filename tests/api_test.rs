@@ -3,7 +3,7 @@ use qni_core_rs::prelude::qni_api::*;
 use qni_core_rs::prelude::*;
 
 unsafe fn qni_print_line_rust(ctx: ProgramEntryCtxArg, text: &str) {
-    qni_print_line(ctx, text.as_ptr(), text.len());
+    assert_eq!(0, qni_print_line(ctx, text.as_ptr(), text.len()));
 }
 
 extern "C" fn test_simple_entry(ctx: ProgramEntryCtxArg) {
@@ -110,6 +110,14 @@ fn api_wait_test() {
         }
 
         assert_eq!(0, ctx.get_command_count());
+
+        let mut msg = ProgramMessage::new();
+        msg.set_ACCEPT_RES(0);
+
+        assert_eq!(
+            msg,
+            protobuf::parse_from_bytes(&connector_ctx.try_recv_send_messge().unwrap()).unwrap()
+        );
 
         qni_hub_delete(hub);
     }

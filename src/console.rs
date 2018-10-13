@@ -75,14 +75,18 @@ impl ConsoleContext {
         mut req: ProgramRequest,
         mut pred: F,
     ) {
+        let tag = self.get_next_input_tag();
+        let mut msg = ProgramMessage::new();
+
         {
-            req.set_tag(self.get_next_input_tag());
-            let mut msg = ProgramMessage::new();
+            req.set_tag(tag);
             msg.set_REQ(req);
 
             let dat = Message::write_to_bytes(&msg).expect("serialize");
 
             self.send_bus.lock().unwrap().broadcast(dat);
+
+            msg.clear_REQ();
         }
 
         loop {
@@ -104,5 +108,11 @@ impl ConsoleContext {
 
             thread::sleep(Duration::from_millis(100));
         }
+
+        msg.set_ACCEPT_RES(tag);
+
+        let dat = Message::write_to_bytes(&msg).expect("serialzie");
+
+        self.send_bus.lock().unwrap().broadcast(dat);
     }
 }
