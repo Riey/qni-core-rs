@@ -15,6 +15,22 @@ extern "C" fn test_simple_entry(ctx: ProgramEntryCtxArg) {
 
 use std::thread;
 use std::time::Duration;
+use std::sync::Arc;
+
+#[test]
+fn api_hub_ref_count_test() {
+    unsafe {
+        let hub_ptr = qni_hub_new(test_simple_entry);
+
+        let hub = (*hub_ptr).clone();
+
+        assert_eq!(Arc::strong_count(&hub), 2);
+
+        qni_hub_delete(hub_ptr);
+
+        assert_eq!(Arc::strong_count(&hub), 1);
+    }
+}
 
 #[test]
 fn api_simple_test() {
@@ -60,7 +76,7 @@ fn api_wait_test() {
         input_req.mut_INPUT().mut_INT();
         input_req.set_tag(0);
 
-        let mut connector_ctx = ConnectorContext::new(hub.read(), ctx.clone());
+        let mut connector_ctx = ConnectorContext::new((*hub).clone(), ctx.clone());
 
         loop {
             match connector_ctx.try_recv_send_messge() {
