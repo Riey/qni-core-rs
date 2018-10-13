@@ -1,5 +1,4 @@
 use bus::{Bus, BusReader};
-use crate::protos::qni_api::*;
 use multiqueue::*;
 use protobuf::{Message, RepeatedField};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -7,6 +6,8 @@ use std::sync::mpsc::TryRecvError;
 use std::sync::{Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
+
+use crate::protos::qni_api::*;
 
 pub enum WaitError {
     Timeout,
@@ -75,9 +76,10 @@ impl ConsoleContext {
         self.input_tag.fetch_add(1, Ordering::Relaxed)
     }
 
-    pub fn wait_console<F: FnMut(&mut ConsoleResponse) -> bool>(
+    pub fn wait_console<F: FnMut(&mut ConsoleResponse) -> bool, FE: Fn() -> bool>(
         &self,
         mut req: ProgramRequest,
+        pred_exit: FE,
         mut pred: F,
     ) -> Result<(), WaitError> {
         let tag = self.get_next_input_tag();
@@ -95,9 +97,12 @@ impl ConsoleContext {
         }
 
         loop {
+            if pred_exit() {
+                self.set_exit();
+            }
 
             if self.need_exit() {
-                return Err(WaitError::Exited)
+                return Err(WaitError::Exited);
             }
 
             match self.response_rx.lock().unwrap().try_recv() {
