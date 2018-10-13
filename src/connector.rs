@@ -51,8 +51,8 @@ impl ConnectorContext {
 
                     if ctx.need_exit() && from >= ctx.get_command_count() {
                         let err = msg.mut_RES().mut_ERR();
-                        err.set_reason("program exited".to_string());
-                        err.set_req_type("GET_STATE".to_string());
+                        err.set_reason("program exited".into());
+                        err.set_req_type("GET_STATE".into());
                     } else {
                         msg.mut_RES().set_OK_GET_STATE(ctx.export_command(from));
                     }
@@ -68,7 +68,7 @@ impl ConnectorContext {
                         None => {
                             let err = msg.mut_RES().mut_ERR();
                             err.set_reason(format!("state [{}] not exist", name));
-                            err.set_req_type("LOAD_STATE".to_string());
+                            err.set_req_type("LOAD_STATE".into());
                         }
                     }
                 }
@@ -81,7 +81,7 @@ impl ConnectorContext {
                         false => {
                             let err = msg.mut_RES().mut_ERR();
                             err.set_reason(format!("state [{}] already exist", name));
-                            err.set_req_type("SHARE_STATE".to_string());
+                            err.set_req_type("SHARE_STATE".into());
                         }
                     }
                 }

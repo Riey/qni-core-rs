@@ -31,12 +31,15 @@ macro_rules! program_command {
     };
 }
 
+use std::str;
+
 #[no_mangle]
 pub unsafe extern "C" fn qni_print(ctx: ProgramEntryCtxArg, text: *const u8, len: usize) -> i32 {
+
     program_command!(ctx, {
         let mut command = ProgramCommand::new();
-        let text = String::from_utf8_unchecked(Vec::from(slice::from_raw_parts(text, len)));
-        command.mut_PRINT().set_PRINT(text);
+        let text = str::from_utf8_unchecked(slice::from_raw_parts(text, len));
+        command.mut_PRINT().set_PRINT(text.into());
 
         ctx.append_command(command);
     });
@@ -52,8 +55,8 @@ pub unsafe extern "C" fn qni_print_line(
 ) -> i32 {
     program_command!(ctx, {
         let mut command = ProgramCommand::new();
-        let text = String::from_utf8_unchecked(Vec::from(slice::from_raw_parts(text, len)));
-        command.mut_PRINT().set_PRINT_LINE(text);
+        let text = str::from_utf8_unchecked(slice::from_raw_parts(text, len));
+        command.mut_PRINT().set_PRINT_LINE(text.into());
 
         ctx.append_command(command);
     });
@@ -103,9 +106,9 @@ pub unsafe extern "C" fn qni_set_font(
 
         let mut font = Font::new();
 
-        font.set_font_family(String::from_utf8_unchecked(Vec::from(
+        font.set_font_family(str::from_utf8_unchecked(
             slice::from_raw_parts(font_family, font_family_len),
-        )));
+        ).into());
         font.set_font_size(font_size);
         font.set_font_style(font_style);
 
