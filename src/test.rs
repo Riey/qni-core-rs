@@ -60,21 +60,6 @@ use std::thread;
 use std::time::Duration;
 
 #[test]
-fn api_hub_ref_count_test() {
-    unsafe {
-        let hub_ptr = qni_hub_new(test_simple_entry);
-
-        let hub = (*hub_ptr).clone();
-
-        assert_eq!(Arc::strong_count(&hub), 2);
-
-        qni_hub_delete(hub_ptr);
-
-        assert_eq!(Arc::strong_count(&hub), 1);
-    }
-}
-
-#[test]
 fn api_simple_test() {
     unsafe {
         let hub = qni_hub_new(test_simple_entry);
@@ -102,6 +87,43 @@ extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
         assert_eq!(100, ret);
     }
 }
+
+#[test]
+fn api_hub_ref_count_test() {
+    unsafe {
+        let hub_ptr = qni_hub_new(test_simple_entry);
+
+        let hub = (*hub_ptr).clone();
+
+        assert_eq!(Arc::strong_count(&hub), 2);
+
+        qni_hub_delete(hub_ptr);
+
+        assert_eq!(Arc::strong_count(&hub), 1);
+    }
+}
+
+#[test]
+fn api_console_ctx_ref_count_test() {
+    unsafe {
+        let hub = qni_hub_new(test_wait_entry);
+
+        let ctx = (*hub).start_new_program();
+
+        let mut connector_ctx = ConnectorContext::new((*hub).clone(), ctx.clone());
+
+        loop {
+            if connector_ctx.try_recv_send_messge().is_ok() {
+                break;
+            }
+        }
+
+        assert_eq!(4, Arc::strong_count(&ctx));
+
+        qni_hub_delete(hub);
+    }
+}
+
 
 use std::sync::mpsc::TryRecvError;
 
