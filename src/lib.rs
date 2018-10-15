@@ -1,4 +1,4 @@
-#![feature(integer_atomics)]
+#![cfg_attr(NIGHTLY, feature(integer_atomics))]
 
 pub mod connector;
 pub mod console;

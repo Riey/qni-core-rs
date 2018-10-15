@@ -19,7 +19,10 @@ pub enum WaitError {
 pub struct ConsoleContext {
     commands: RwLock<Vec<ProgramCommand>>,
     exit_flag: AtomicBool,
+    #[cfg(NIGHTLY)]
     request_tag: AtomicU32,
+    #[cfg(not(NIGHTLY))]
+    request_tag: RwLock<u32>,
     send_tx: BroadcastSender<Vec<u8>>,
     send_rx: BroadcastReceiver<Vec<u8>>,
     response: AtomicPtr<ConsoleResponse>,
@@ -44,7 +47,10 @@ impl ConsoleContext {
             send_tx,
             send_rx,
             exit_flag: AtomicBool::new(false),
+            #[cfg(NIGHTLY)]
             request_tag: AtomicU32::new(0),
+            #[cfg(not(NIGHTLY))]
+            request_tag: RwLock::new(0),
             response: AtomicPtr::new(ptr::null_mut()),
         }
     }
@@ -80,12 +86,33 @@ impl ConsoleContext {
     }
 
     pub fn get_next_input_tag(&self) -> u32 {
-        self.request_tag.fetch_add(1, Ordering::Relaxed)
+        #[cfg(NIGHTLY)]
+        {
+            self.request_tag.fetch_add(1, Ordering::Relaxed)
+        }
+        #[cfg(not(NIGHTLY))]
+        {
+            let tag = self.request_tag.write().unwrap();
+            *tag += 1;
+            tag
+        }
+    }
+
+    #[inline]
+    pub fn get_cur_input_tag(&self) -> u32 {
+        #[cfg(NIGHTLY)]
+        {
+            self.request_tag.load(Ordering::Relaxed)
+        }
+        #[cfg(not(NIGHTLY))]
+        {
+            *self.request_tag.read().unwrap()
+        }
     }
 
     pub fn on_recv_response(&self, res: ConsoleResponse) -> Option<u32> {
         //outdated
-        if res.tag + 1 < self.request_tag.load(Ordering::Relaxed) {
+        if res.tag + 1 < self.get_cur_input_tag() {
             Some(res.tag)
         } else {
             unsafe {

@@ -125,8 +125,6 @@ fn api_console_ctx_ref_count_test() {
     }
 }
 
-use std::sync::mpsc::TryRecvError;
-
 #[test]
 fn api_wait_test() {
     unsafe {
