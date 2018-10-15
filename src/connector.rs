@@ -1,22 +1,16 @@
-use std::sync::{
-    mpsc::{TryRecvError, TrySendError},
-    Arc,
-};
+use std::sync::Arc;
 
-use bus::BusReader;
 use crate::console::ConsoleContext;
 use crate::hub::Hub;
 use crate::protos::qni_api::*;
 use log::{debug, error};
-use multiqueue::MPMCSender;
+use multiqueue::BroadcastReceiver;
 use protobuf::Message;
-use std;
 
 pub struct ConnectorContext {
     hub: Arc<Hub>,
     console_ctx: Arc<ConsoleContext>,
-    send_rx: BusReader<Vec<u8>>,
-    response_tx: MPMCSender<ConsoleResponse>,
+    send_rx: BroadcastReceiver<Vec<u8>>,
 }
 
 impl ConnectorContext {
@@ -24,14 +18,12 @@ impl ConnectorContext {
         Self {
             hub,
             send_rx: console_ctx.get_send_rx(),
-            response_tx: console_ctx.clone_reponse_tx(),
             console_ctx,
         }
     }
 
-    pub fn update_console_ctx(&mut self, console_ctx: Arc<ConsoleContext>) {
+    fn update_console_ctx(&mut self, console_ctx: Arc<ConsoleContext>) {
         self.send_rx = console_ctx.get_send_rx();
-        self.response_tx = console_ctx.clone_reponse_tx();
         self.console_ctx = console_ctx;
     }
 
@@ -104,11 +96,7 @@ impl ConnectorContext {
         }
     }
 
-    pub fn try_recv_send_messge(&mut self) -> Result<Vec<u8>, TryRecvError> {
-        self.send_rx.try_recv()
-    }
-
-    pub fn recv_message(&mut self, msg: &[u8]) -> Option<Vec<u8>> {
+    pub fn on_recv_message(&mut self, msg: &[u8]) -> Option<Vec<u8>> {
         match protobuf::parse_from_bytes::<ConsoleMessage>(msg) {
             Ok(mut msg) => {
                 debug!("received: {:#?}", msg);
@@ -116,24 +104,13 @@ impl ConnectorContext {
                 if msg.has_REQ() {
                     self.process_request(msg.take_REQ())
                 } else if msg.has_RES() {
-                    let mut res = msg.take_RES();
-                    loop {
-                        match self.response_tx.try_send(res) {
-                            Ok(_) => break,
-                            Err(TrySendError::Full(left_res)) => {
-                                res = left_res;
-                            }
-                            Err(TrySendError::Disconnected(_)) => {
-                                return None;
-                            }
-                        }
-                        if self.response_tx.try_send(msg.take_RES()).is_ok() {
-                            break;
-                        }
-
-                        std::thread::sleep(std::time::Duration::from_millis(100));
-                    }
-                    None
+                    self.console_ctx
+                        .on_recv_response(msg.take_RES())
+                        .map(|tag| {
+                            let mut msg = ProgramMessage::new();
+                            msg.set_ACCEPT_RES(tag);
+                            Message::write_to_bytes(&msg).expect("serialize")
+                        })
                 } else {
                     None
                 }
@@ -144,5 +121,9 @@ impl ConnectorContext {
                 None
             }
         }
+    }
+
+    pub fn try_get_msg(&mut self) -> Option<Vec<u8>> {
+        self.send_rx.try_recv().ok()
     }
 }

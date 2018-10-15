@@ -83,8 +83,9 @@ fn api_simple_test() {
 extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
     unsafe {
         let mut ret = 0;
-        assert_eq!(0, qni_wait_int(ctx, &mut ret));
-        assert_eq!(100, ret);
+        if qni_wait_int(ctx, &mut ret) == 0 {
+            assert_eq!(100, ret);
+        }
     }
 }
 
@@ -113,7 +114,7 @@ fn api_console_ctx_ref_count_test() {
         let mut connector_ctx = ConnectorContext::new((*hub).clone(), ctx.clone());
 
         loop {
-            if connector_ctx.try_recv_send_messge().is_ok() {
+            if connector_ctx.try_get_msg().is_some() {
                 break;
             }
         }
@@ -123,7 +124,6 @@ fn api_console_ctx_ref_count_test() {
         qni_hub_delete(hub);
     }
 }
-
 
 use std::sync::mpsc::TryRecvError;
 
@@ -143,13 +143,12 @@ fn api_wait_test() {
         let mut connector_ctx = ConnectorContext::new((*hub).clone(), ctx.clone());
 
         loop {
-            match connector_ctx.try_recv_send_messge() {
-                Ok(send_msg) => {
+            match connector_ctx.try_get_msg() {
+                Some(send_msg) => {
                     assert_eq!(msg, protobuf::parse_from_bytes(&send_msg).unwrap());
                     break;
                 }
-                Err(TryRecvError::Disconnected) => panic!("disconnected"),
-                Err(TryRecvError::Empty) => {
+                None => {
                     thread::sleep(Duration::from_millis(50));
                 }
             }
@@ -161,7 +160,7 @@ fn api_wait_test() {
         input_res.mut_OK_INPUT().set_INT(100);
 
         assert_eq!(
-            connector_ctx.recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()),
+            connector_ctx.on_recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()),
             None
         );
 
@@ -180,7 +179,7 @@ fn api_wait_test() {
 
         assert_eq!(
             msg,
-            protobuf::parse_from_bytes(&connector_ctx.try_recv_send_messge().unwrap()).unwrap()
+            protobuf::parse_from_bytes(&connector_ctx.try_get_msg().unwrap()).unwrap()
         );
 
         qni_hub_delete(hub);

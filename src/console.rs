@@ -1,9 +1,11 @@
-use bus::{Bus, BusReader};
-use multiqueue::*;
+use libc::{free, malloc};
+use multiqueue::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use protobuf::{Message, RepeatedField};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::mpsc::TryRecvError;
-use std::sync::{Mutex, RwLock};
+use std::mem::size_of;
+use std::ptr;
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering};
+use std::sync::mpsc::TrySendError;
+use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
 
@@ -16,25 +18,34 @@ pub enum WaitError {
 
 pub struct ConsoleContext {
     commands: RwLock<Vec<ProgramCommand>>,
-    send_bus: Mutex<Bus<Vec<u8>>>,
-    response_tx: Mutex<MPMCSender<ConsoleResponse>>,
-    response_rx: Mutex<MPMCReceiver<ConsoleResponse>>,
     exit_flag: AtomicBool,
-    input_tag: AtomicU32,
+    request_tag: AtomicU32,
+    send_tx: BroadcastSender<Vec<u8>>,
+    send_rx: BroadcastReceiver<Vec<u8>>,
+    response: AtomicPtr<ConsoleResponse>,
+}
+
+unsafe impl Sync for ConsoleContext {}
+
+impl Drop for ConsoleContext {
+    fn drop(&mut self) {
+        unsafe {
+            free(self.response.load(Ordering::Relaxed) as *mut _);
+        }
+    }
 }
 
 impl ConsoleContext {
     pub fn new() -> Self {
-        let send_bus = Mutex::new(Bus::new(10));
-        let (response_tx, response_rx) = mpmc_queue(10);
+        let (send_tx, send_rx) = broadcast_queue(10);
 
         Self {
             commands: Default::default(),
+            send_tx,
+            send_rx,
             exit_flag: AtomicBool::new(false),
-            send_bus,
-            response_tx: Mutex::new(response_tx),
-            response_rx: Mutex::new(response_rx),
-            input_tag: AtomicU32::new(0),
+            request_tag: AtomicU32::new(0),
+            response: AtomicPtr::new(ptr::null_mut()),
         }
     }
 
@@ -46,12 +57,8 @@ impl ConsoleContext {
         self.exit_flag.store(true, Ordering::Relaxed)
     }
 
-    pub fn get_send_rx(&self) -> BusReader<Vec<u8>> {
-        self.send_bus.lock().unwrap().add_rx()
-    }
-
-    pub fn clone_reponse_tx(&self) -> MPMCSender<ConsoleResponse> {
-        self.response_tx.lock().unwrap().clone()
+    pub fn get_send_rx(&self) -> BroadcastReceiver<Vec<u8>> {
+        self.send_rx.clone()
     }
 
     pub fn append_command(&self, command: ProgramCommand) {
@@ -73,7 +80,25 @@ impl ConsoleContext {
     }
 
     pub fn get_next_input_tag(&self) -> u32 {
-        self.input_tag.fetch_add(1, Ordering::Relaxed)
+        self.request_tag.fetch_add(1, Ordering::Relaxed)
+    }
+
+    pub fn on_recv_response(&self, res: ConsoleResponse) -> Option<u32> {
+        //outdated
+        if res.tag + 1 < self.request_tag.load(Ordering::Relaxed) {
+            Some(res.tag)
+        } else {
+            unsafe {
+                let mut ptr = malloc(size_of::<ConsoleResponse>()) as *mut ConsoleResponse;
+                ptr.write(res);
+
+                ptr = self.response.swap(ptr, Ordering::Relaxed);
+
+                free(ptr as *mut _);
+
+                None
+            }
+        }
     }
 
     pub fn wait_console<F: FnMut(&mut ConsoleResponse) -> bool, FE: Fn() -> bool>(
@@ -89,9 +114,19 @@ impl ConsoleContext {
             req.set_tag(tag);
             msg.set_REQ(req);
 
-            let dat = Message::write_to_bytes(&msg).expect("serialize");
+            let mut dat = Message::write_to_bytes(&msg).expect("serialize");
 
-            self.send_bus.lock().unwrap().broadcast(dat);
+            loop {
+                match self.send_tx.try_send(dat) {
+                    Ok(_) => break,
+                    Err(TrySendError::Disconnected(prev_dat))
+                    | Err(TrySendError::Full(prev_dat)) => {
+                        dat = prev_dat;
+                    }
+                }
+
+                thread::sleep(Duration::from_millis(50));
+            }
 
             msg.clear_REQ();
         }
@@ -105,19 +140,19 @@ impl ConsoleContext {
                 return Err(WaitError::Exited);
             }
 
-            match self.response_rx.lock().unwrap().try_recv() {
-                Ok(mut res) => {
-                    if pred(&mut res) {
+            let response = self.response.swap(ptr::null_mut(), Ordering::Relaxed);
+
+            if response != ptr::null_mut() {
+                unsafe {
+                    let result = pred(&mut *response);
+
+                    free(response as *mut _);
+
+                    if result {
                         break;
                     }
                 }
-
-                Err(TryRecvError::Disconnected) => {
-                    panic!("queue disconnected");
-                }
-
-                Err(TryRecvError::Empty) => {}
-            };
+            }
 
             //TODO: implement timeout
 
@@ -126,9 +161,18 @@ impl ConsoleContext {
 
         msg.set_ACCEPT_RES(tag);
 
-        let dat = Message::write_to_bytes(&msg).expect("serialzie");
+        let mut dat = Message::write_to_bytes(&msg).expect("serialzie");
 
-        self.send_bus.lock().unwrap().broadcast(dat);
+        loop {
+            match self.send_tx.try_send(dat) {
+                Ok(_) => break,
+                Err(TrySendError::Disconnected(prev_dat)) | Err(TrySendError::Full(prev_dat)) => {
+                    dat = prev_dat;
+                }
+            }
+
+            thread::sleep(Duration::from_millis(50));
+        }
 
         Ok(())
     }

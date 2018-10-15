@@ -178,21 +178,23 @@ pub unsafe extern "C" fn qni_wait_int(ctx: ProgramEntryCtxArg, ret: *mut i32) ->
     let mut req = ProgramRequest::new();
     req.mut_INPUT().mut_INT();
 
-    match (*ctx).wait_console(req, || {
-        Arc::strong_count(&*ctx) <= 2
-    }, |res| {
-        if !res.has_OK_INPUT() {
-            return false;
-        }
-
-        match res.take_OK_INPUT().data {
-            Some(InputResponse_oneof_data::INT(num)) => {
-                *ret = num;
-                true
+    match (*ctx).wait_console(
+        req,
+        || Arc::strong_count(&*ctx) <= 2,
+        |res| {
+            if !res.has_OK_INPUT() {
+                return false;
             }
-            _ => false,
-        }
-    }) {
+
+            match res.take_OK_INPUT().data {
+                Some(InputResponse_oneof_data::INT(num)) => {
+                    *ret = num;
+                    true
+                }
+                _ => false,
+            }
+        },
+    ) {
         Ok(_) => 0,
         Err(WaitError::Exited) => -1,
         Err(WaitError::Timeout) => 1,
