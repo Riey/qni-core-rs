@@ -3,7 +3,9 @@ use multiqueue::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use protobuf::{Message, RepeatedField};
 use std::mem::size_of;
 use std::ptr;
-use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+#[cfg(NIGHTLY)]
+use std::sync::atomic::AtomicU32;
 use std::sync::mpsc::TrySendError;
 use std::sync::RwLock;
 use std::thread;
@@ -92,9 +94,10 @@ impl ConsoleContext {
         }
         #[cfg(not(NIGHTLY))]
         {
-            let tag = self.request_tag.write().unwrap();
+            let mut tag = self.request_tag.write().unwrap();
+            let temp = *tag;
             *tag += 1;
-            tag
+            temp
         }
     }
 

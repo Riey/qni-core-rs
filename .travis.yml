@@ -9,11 +9,10 @@ addons:
   apt:
     sources:
     - sourceline: "ppa:maarten-fonville/protobuf"
-    
+
     packages:
     - protobuf-compiler
     - libprotoc-dev
-    
 
 git:
   depth: 1
@@ -23,7 +22,6 @@ cache: cargo
 matrix:
   allow_failures:
     - rust: stable
-    - rust: beta
 
 script:
   - cargo build --verbose --all
