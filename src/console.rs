@@ -10,6 +10,7 @@ use std::sync::mpsc::TrySendError;
 use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
+use chrono::prelude::*;
 
 use crate::protos::qni_api::*;
 
@@ -136,6 +137,7 @@ impl ConsoleContext {
         mut req: ProgramRequest,
         pred_exit: FE,
         mut pred: F,
+        expire: Option<DateTime<Utc>>,
     ) -> Result<(), WaitError> {
         let tag = self.get_next_input_tag();
         let mut msg = ProgramMessage::new();
@@ -184,14 +186,18 @@ impl ConsoleContext {
                 }
             }
 
-            //TODO: implement timeout
+            if let Some(expire) = expire {
+                if Utc::now() >= expire {
+                    return Err(WaitError::Timeout);
+                }
+            }
 
             thread::sleep(Duration::from_millis(100));
         }
 
         msg.set_ACCEPT_RES(tag);
 
-        let mut dat = Message::write_to_bytes(&msg).expect("serialzie");
+        let mut dat = Message::write_to_bytes(&msg).expect("serialize");
 
         loop {
             match self.send_tx.try_send(dat) {

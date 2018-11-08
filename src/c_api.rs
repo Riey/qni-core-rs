@@ -194,6 +194,7 @@ pub unsafe extern "C" fn qni_wait_int(ctx: ProgramEntryCtxArg, ret: *mut i32) ->
                 _ => false,
             }
         },
+        None,
     ) {
         Ok(_) => 0,
         Err(WaitError::Exited) => -1,
