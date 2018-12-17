@@ -28,7 +28,7 @@ impl ConnectorContext {
     }
 
     pub fn need_exit(&self) -> bool {
-        self.hub.need_exit()
+        self.console_ctx.need_exit() || self.hub.need_exit()
     }
 
     fn process_request(&mut self, req: ConsoleRequest) -> Option<Vec<u8>> {
