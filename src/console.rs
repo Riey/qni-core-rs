@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 #[cfg(NIGHTLY)]
 use std::sync::atomic::AtomicU32;
 use std::sync::mpsc::TrySendError;
-use std::sync::RwLock;
+use std::sync::{RwLock, Mutex};
 use std::thread;
 use std::time::Duration;
 use chrono::prelude::*;
@@ -27,12 +27,10 @@ pub struct ConsoleContext {
     request_tag: AtomicU32,
     #[cfg(not(NIGHTLY))]
     request_tag: RwLock<u32>,
-    send_tx: BroadcastSender<Vec<u8>>,
-    send_rx: BroadcastReceiver<Vec<u8>>,
+    send_tx: Mutex<BroadcastSender<Vec<u8>>>,
+    send_rx: Mutex<BroadcastReceiver<Vec<u8>>>,
     response: AtomicPtr<ConsoleResponse>,
 }
-
-unsafe impl Sync for ConsoleContext {}
 
 impl Drop for ConsoleContext {
     fn drop(&mut self) {
@@ -48,8 +46,8 @@ impl ConsoleContext {
 
         Self {
             commands: Default::default(),
-            send_tx,
-            send_rx,
+            send_tx: Mutex::new(send_tx),
+            send_rx: Mutex::new(send_rx),
             exit_flag: AtomicBool::new(false),
             #[cfg(NIGHTLY)]
             request_tag: AtomicU32::new(0),
@@ -68,7 +66,7 @@ impl ConsoleContext {
     }
 
     pub fn get_send_rx(&self) -> BroadcastReceiver<Vec<u8>> {
-        self.send_rx.clone()
+        self.send_rx.lock().unwrap().clone()
     }
 
     pub fn append_command(&self, command: ProgramCommand) {
@@ -150,7 +148,7 @@ impl ConsoleContext {
             let mut dat = Message::write_to_bytes(&msg).expect("serialize");
 
             loop {
-                match self.send_tx.try_send(dat) {
+                match self.send_tx.lock().unwrap().try_send(dat) {
                     Ok(_) => break,
                     Err(TrySendError::Disconnected(prev_dat))
                     | Err(TrySendError::Full(prev_dat)) => {
@@ -201,7 +199,7 @@ impl ConsoleContext {
         let mut dat = Message::write_to_bytes(&msg).expect("serialize");
 
         loop {
-            match self.send_tx.try_send(dat) {
+            match self.send_tx.lock().unwrap().try_send(dat) {
                 Ok(_) => break,
                 Err(TrySendError::Disconnected(prev_dat)) | Err(TrySendError::Full(prev_dat)) => {
                     dat = prev_dat;
