@@ -14,6 +14,7 @@ use chrono::prelude::*;
 
 use crate::protos::qni_api::*;
 
+#[derive(Debug)]
 pub enum WaitError {
     Timeout,
     Exited,
