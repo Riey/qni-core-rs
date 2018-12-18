@@ -1,7 +1,5 @@
-use libc::{free, malloc};
 use multiqueue::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use protobuf::{Message, RepeatedField};
-use std::mem::size_of;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicPtr, Ordering};
 use std::sync::mpsc::TrySendError;
@@ -30,9 +28,7 @@ pub struct ConsoleContext {
 impl Drop for ConsoleContext {
     fn drop(&mut self) {
         unsafe {
-            let ptr = self.response.load(Ordering::Relaxed);
-            drop(ptr.read());
-            free(ptr as *mut _);
+            let _ = Box::from_raw(self.response.load(Ordering::Relaxed));
         }
     }
 }
@@ -96,13 +92,13 @@ impl ConsoleContext {
             Some(res.tag)
         } else {
             unsafe {
-                let mut ptr = malloc(size_of::<ConsoleResponse>()) as *mut ConsoleResponse;
-                ptr.write(res);
+                let res = Box::new(res);
 
-                ptr = self.response.swap(ptr, Ordering::Relaxed);
+                let ptr = self.response.swap(Box::into_raw(res), Ordering::Relaxed);
 
-                drop(ptr.read());
-                free(ptr as *mut _);
+                if ptr != ptr::null_mut() {
+                    let _ = Box::from_raw(ptr);
+                }
 
                 None
             }
@@ -155,7 +151,7 @@ impl ConsoleContext {
                 unsafe {
                     let result = pred(&mut *response);
 
-                    free(response as *mut _);
+                    let _ = Box::from_raw(response);
 
                     if result {
                         break;
