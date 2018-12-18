@@ -30,7 +30,9 @@ pub struct ConsoleContext {
 impl Drop for ConsoleContext {
     fn drop(&mut self) {
         unsafe {
-            free(self.response.load(Ordering::Relaxed) as *mut _);
+            let ptr = self.response.load(Ordering::Relaxed);
+            drop(ptr.read());
+            free(ptr as *mut _);
         }
     }
 }
@@ -99,6 +101,7 @@ impl ConsoleContext {
 
                 ptr = self.response.swap(ptr, Ordering::Relaxed);
 
+                drop(ptr.read());
                 free(ptr as *mut _);
 
                 None
