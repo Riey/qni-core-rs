@@ -1,12 +1,11 @@
 [package]
 name = "qni-core-rs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Riey <creeper844@gmail.com>"]
 edition = "2018"
 
 [build-dependencies]
 protoc-rust = "*"
-rustc_version = "*"
 
 [dependencies]
 libc = "*"

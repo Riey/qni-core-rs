@@ -3,9 +3,7 @@ use multiqueue::{broadcast_queue, BroadcastReceiver, BroadcastSender};
 use protobuf::{Message, RepeatedField};
 use std::mem::size_of;
 use std::ptr;
-use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
-#[cfg(NIGHTLY)]
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicPtr, Ordering};
 use std::sync::mpsc::TrySendError;
 use std::sync::{RwLock, Mutex};
 use std::thread;
@@ -23,10 +21,7 @@ pub enum WaitError {
 pub struct ConsoleContext {
     commands: RwLock<Vec<ProgramCommand>>,
     exit_flag: AtomicBool,
-    #[cfg(NIGHTLY)]
-    request_tag: AtomicU32,
-    #[cfg(not(NIGHTLY))]
-    request_tag: RwLock<u32>,
+    request_tag: AtomicUsize,
     send_tx: Mutex<BroadcastSender<Vec<u8>>>,
     send_rx: Mutex<BroadcastReceiver<Vec<u8>>>,
     response: AtomicPtr<ConsoleResponse>,
@@ -49,10 +44,7 @@ impl ConsoleContext {
             send_tx: Mutex::new(send_tx),
             send_rx: Mutex::new(send_rx),
             exit_flag: AtomicBool::new(false),
-            #[cfg(NIGHTLY)]
-            request_tag: AtomicU32::new(0),
-            #[cfg(not(NIGHTLY))]
-            request_tag: RwLock::new(0),
+            request_tag: AtomicUsize::new(0),
             response: AtomicPtr::new(ptr::null_mut()),
         }
     }
@@ -88,29 +80,12 @@ impl ConsoleContext {
     }
 
     pub fn get_next_input_tag(&self) -> u32 {
-        #[cfg(NIGHTLY)]
-        {
-            self.request_tag.fetch_add(1, Ordering::Relaxed)
-        }
-        #[cfg(not(NIGHTLY))]
-        {
-            let mut tag = self.request_tag.write().unwrap();
-            let temp = *tag;
-            *tag += 1;
-            temp
-        }
+        self.request_tag.fetch_add(1, Ordering::Relaxed) as u32
     }
 
     #[inline]
     pub fn get_cur_input_tag(&self) -> u32 {
-        #[cfg(NIGHTLY)]
-        {
-            self.request_tag.load(Ordering::Relaxed)
-        }
-        #[cfg(not(NIGHTLY))]
-        {
-            *self.request_tag.read().unwrap()
-        }
+        self.request_tag.load(Ordering::Relaxed) as u32
     }
 
     pub fn on_recv_response(&self, res: ConsoleResponse) -> Option<u32> {
