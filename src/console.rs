@@ -28,7 +28,10 @@ pub struct ConsoleContext {
 impl Drop for ConsoleContext {
     fn drop(&mut self) {
         unsafe {
-            let _ = Box::from_raw(self.response.load(Ordering::Relaxed));
+            let ptr = self.response.load(Ordering::Relaxed);
+            if ptr != ptr::null_mut() {
+                let _ = Box::from_raw(self.response.load(Ordering::Relaxed));
+            }
         }
     }
 }
@@ -105,10 +108,9 @@ impl ConsoleContext {
         }
     }
 
-    pub fn wait_console<F: FnMut(&mut ConsoleResponse) -> bool, FE: Fn() -> bool>(
+    pub fn wait_console<F: FnMut(&mut ConsoleResponse) -> bool>(
         &self,
         mut req: ProgramRequest,
-        pred_exit: FE,
         mut pred: F,
         expire: Option<DateTime<Utc>>,
     ) -> Result<(), WaitError> {
@@ -137,9 +139,6 @@ impl ConsoleContext {
         }
 
         loop {
-            if pred_exit() {
-                self.set_exit();
-            }
 
             if self.need_exit() {
                 return Err(WaitError::Exited);

@@ -12,15 +12,21 @@ extern "C" fn test_exit_entry(ctx: ProgramEntryCtxArg) {
         EXIT_FLAG = true;
 
         EXIT_VALUE = qni_wait_int(ctx, &mut ret);
+        qni_exit_program(ctx);
     }
 }
 
 #[test]
 fn api_exit_test() {
     unsafe {
-        let hub = qni_hub_new(test_exit_entry);
+        let ctx = Arc::new(ConsoleContext::new());
 
-        let ctx = (*hub).start_new_program();
+        let handle = {
+            let mut ctx = ctx.clone();
+            thread::spawn(move || {
+                test_exit_entry(&mut ctx as _);
+            })
+        };
 
         loop {
             if EXIT_FLAG {
@@ -40,6 +46,8 @@ fn api_exit_test() {
             thread::sleep(Duration::from_millis(20));
         }
 
+        handle.join().unwrap();
+
         assert_eq!(-1, EXIT_VALUE);
     }
 }
@@ -52,6 +60,7 @@ extern "C" fn test_simple_entry(ctx: ProgramEntryCtxArg) {
     unsafe {
         qni_print_line_rust(ctx, "Hello, world!");
         qni_print_line_rust(ctx, "Hello, world!");
+        qni_exit_program(ctx);
     }
 }
 
@@ -61,23 +70,18 @@ use std::time::Duration;
 
 #[test]
 fn api_simple_test() {
-    unsafe {
-        let hub = qni_hub_new(test_simple_entry);
+    let mut ctx = Arc::new(ConsoleContext::new());
+    test_simple_entry(&mut ctx as _);
 
-        let ctx = (*hub).start_new_program();
-
-        loop {
-            if ctx.need_exit() {
-                break;
-            }
-
-            thread::sleep(Duration::from_millis(20));
+    loop {
+        if ctx.need_exit() {
+            break;
         }
 
-        assert_eq!(2, ctx.get_command_count());
-
-        qni_hub_delete(hub);
+        thread::sleep(Duration::from_millis(20));
     }
+
+    assert_eq!(2, ctx.get_command_count());
 }
 
 extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
@@ -86,100 +90,65 @@ extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
         if qni_wait_int(ctx, &mut ret) == 0 {
             assert_eq!(100, ret);
         }
-    }
-}
-
-#[test]
-fn api_hub_ref_count_test() {
-    unsafe {
-        let hub_ptr = qni_hub_new(test_simple_entry);
-
-        let hub = (*hub_ptr).clone();
-
-        assert_eq!(Arc::strong_count(&hub), 2);
-
-        qni_hub_delete(hub_ptr);
-
-        assert_eq!(Arc::strong_count(&hub), 1);
-    }
-}
-
-#[test]
-fn api_console_ctx_ref_count_test() {
-    unsafe {
-        let hub = qni_hub_new(test_wait_entry);
-
-        let ctx = (*hub).start_new_program();
-
-        let mut connector_ctx = ConnectorContext::new((*hub).clone(), ctx.clone());
-
-        loop {
-            if connector_ctx.try_get_msg().is_some() {
-                break;
-            }
-        }
-
-        assert_eq!(4, Arc::strong_count(&ctx));
-
-        qni_hub_delete(hub);
+        qni_exit_program(ctx);
     }
 }
 
 #[test]
 fn api_wait_test() {
-    unsafe {
-        let hub = qni_hub_new(test_wait_entry);
+    let ctx = Arc::new(ConsoleContext::new());
+    {
+        let mut ctx = ctx.clone();
+        thread::spawn(move || {
+            test_wait_entry(&mut ctx as *mut _);
+        })
+    };
 
-        let ctx = (*hub).start_new_program();
+    let mut msg = ProgramMessage::new();
+    let input_req = msg.mut_REQ();
 
-        let mut msg = ProgramMessage::new();
-        let input_req = msg.mut_REQ();
+    input_req.mut_INPUT().mut_INT();
+    input_req.set_tag(0);
 
-        input_req.mut_INPUT().mut_INT();
-        input_req.set_tag(0);
+    let mut connector_ctx = ConnectorContext::new(ctx.clone());
 
-        let mut connector_ctx = ConnectorContext::new((*hub).clone(), ctx.clone());
-
-        loop {
-            match connector_ctx.try_get_msg() {
-                Some(send_msg) => {
-                    assert_eq!(msg, protobuf::parse_from_bytes(&send_msg).unwrap());
-                    break;
-                }
-                None => {
-                    thread::sleep(Duration::from_millis(50));
-                }
-            }
-        }
-
-        let mut msg = ConsoleMessage::new();
-        let input_res = msg.mut_RES();
-
-        input_res.mut_OK_INPUT().set_INT(100);
-
-        assert_eq!(
-            connector_ctx.on_recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()),
-            None
-        );
-
-        loop {
-            if ctx.need_exit() {
+    loop {
+        match connector_ctx.try_get_msg() {
+            Some(send_msg) => {
+                assert_eq!(msg, protobuf::parse_from_bytes(&send_msg).unwrap());
                 break;
             }
+            None => {
+                thread::sleep(Duration::from_millis(50));
+            }
+        }
+    }
 
-            thread::sleep(Duration::from_millis(20));
+    let mut msg = ConsoleMessage::new();
+    let input_res = msg.mut_RES();
+
+    input_res.mut_OK_INPUT().set_INT(100);
+
+    assert_eq!(
+        connector_ctx.on_recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()),
+        None
+    );
+
+    loop {
+        if ctx.need_exit() {
+            break;
         }
 
-        assert_eq!(0, ctx.get_command_count());
-
-        let mut msg = ProgramMessage::new();
-        msg.set_ACCEPT_RES(0);
-
-        assert_eq!(
-            msg,
-            protobuf::parse_from_bytes(&connector_ctx.try_get_msg().unwrap()).unwrap()
-        );
-
-        qni_hub_delete(hub);
+        thread::sleep(Duration::from_millis(20));
     }
+
+    assert_eq!(0, ctx.get_command_count());
+
+    let mut msg = ProgramMessage::new();
+    msg.set_ACCEPT_RES(0);
+
+    assert_eq!(
+        msg,
+        protobuf::parse_from_bytes(&connector_ctx.try_get_msg().unwrap()).unwrap()
+    );
 }

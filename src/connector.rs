@@ -1,34 +1,26 @@
 use std::sync::Arc;
 
 use crate::console::ConsoleContext;
-use crate::hub::Hub;
 use crate::protos::qni_api::*;
 use log::{debug, error};
 use multiqueue::BroadcastReceiver;
 use protobuf::Message;
 
 pub struct ConnectorContext {
-    hub: Arc<Hub>,
     console_ctx: Arc<ConsoleContext>,
     send_rx: BroadcastReceiver<Vec<u8>>,
 }
 
 impl ConnectorContext {
-    pub fn new(hub: Arc<Hub>, console_ctx: Arc<ConsoleContext>) -> Self {
+    pub fn new(console_ctx: Arc<ConsoleContext>) -> Self {
         Self {
-            hub,
             send_rx: console_ctx.get_send_rx(),
             console_ctx,
         }
     }
 
-    fn update_console_ctx(&mut self, console_ctx: Arc<ConsoleContext>) {
-        self.send_rx = console_ctx.get_send_rx();
-        self.console_ctx = console_ctx;
-    }
-
     pub fn need_exit(&self) -> bool {
-        self.console_ctx.need_exit() || self.hub.need_exit()
+        self.console_ctx.need_exit()
     }
 
     fn process_request(&mut self, req: ConsoleRequest) -> Option<Vec<u8>> {
@@ -48,43 +40,6 @@ impl ConnectorContext {
                     } else {
                         msg.mut_RES().set_OK_GET_STATE(ctx.export_command(from));
                     }
-                }
-                ConsoleRequest_oneof_data::LOAD_STATE(name) => {
-                    let ctx = self.hub.get_ctx(&name);
-
-                    match ctx {
-                        Some(ctx) => {
-                            self.update_console_ctx(ctx);
-                            msg.mut_RES().mut_OK_LOAD_STATE();
-                        }
-                        None => {
-                            let err = msg.mut_RES().mut_ERR();
-                            err.set_reason(format!("state [{}] not exist", name));
-                            err.set_req_type("LOAD_STATE".into());
-                        }
-                    }
-                }
-
-                ConsoleRequest_oneof_data::SHARE_STATE(name) => {
-                    match self.hub.insert_ctx(name.clone(), &self.console_ctx, false) {
-                        true => {
-                            msg.mut_RES().set_OK_SHARE_STATE(name);
-                        }
-                        false => {
-                            let err = msg.mut_RES().mut_ERR();
-                            err.set_reason(format!("state [{}] already exist", name));
-                            err.set_req_type("SHARE_STATE".into());
-                        }
-                    }
-                }
-
-                ConsoleRequest_oneof_data::SHARE_STATE_OVERWRITE(name) => {
-                    self.hub.insert_ctx(name.clone(), &self.console_ctx, true);
-                    msg.mut_RES().set_OK_SHARE_STATE(name);
-                }
-
-                ConsoleRequest_oneof_data::DELETE_STATE(name) => {
-                    self.hub.erase_ctx(&name);
                 }
             }
 
