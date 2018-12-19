@@ -95,6 +95,14 @@ extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
 }
 
 #[test]
+fn api_delete_test() {
+    unsafe {
+        let ctx = qni_new_program();
+        qni_delete_program(ctx);
+    }
+}
+
+#[test]
 fn api_wait_test() {
     let ctx = Arc::new(ConsoleContext::new());
     {

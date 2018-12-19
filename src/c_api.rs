@@ -15,6 +15,11 @@ pub unsafe extern "C" fn qni_new_program() -> ProgramEntryCtxArg {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn qni_delete_program(ctx: ProgramEntryCtxArg) {
+    let _ = Box::from_raw(ctx);
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn qni_exit_program(ctx: ProgramEntryCtxArg) {
     (*ctx).set_exit();
 }
