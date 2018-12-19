@@ -1,6 +1,6 @@
-use crate::c_api::*;
-use crate::prelude::qni_api::*;
-use crate::prelude::*;
+use qni_core_rs::c_api::*;
+use qni_core_rs::prelude::qni_api::*;
+use qni_core_rs::prelude::*;
 
 static mut EXIT_FLAG: bool = false;
 static mut EXIT_VALUE: i32 = 0;
