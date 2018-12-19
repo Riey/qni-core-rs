@@ -3,6 +3,18 @@ name = "qni-core-rs"
 version = "0.2.0"
 authors = ["Riey <creeper844@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/Riey/qni-core-rs"
+license-file = "LICENSE"
+readme = "README.md"
+
+exclude = [
+    "src/protos/qni_api.rs",
+    ".gitignore",
+    ".gitmodules",
+    ".travis.yml",
+    ".vscode/**/*",
+    ".idea/**/*",
+]
 
 [build-dependencies]
 protoc-rust = "*"
