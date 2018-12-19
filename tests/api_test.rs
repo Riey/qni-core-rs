@@ -12,7 +12,7 @@ extern "C" fn test_exit_entry(ctx: ProgramEntryCtxArg) {
         EXIT_FLAG = true;
 
         EXIT_VALUE = qni_wait_int(ctx, &mut ret);
-        qni_exit_program(ctx);
+        qni_program_exit(ctx);
     }
 }
 
@@ -60,7 +60,7 @@ extern "C" fn test_simple_entry(ctx: ProgramEntryCtxArg) {
     unsafe {
         qni_print_line_rust(ctx, "Hello, world!");
         qni_print_line_rust(ctx, "Hello, world!");
-        qni_exit_program(ctx);
+        qni_program_exit(ctx);
     }
 }
 
@@ -90,15 +90,15 @@ extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
         if qni_wait_int(ctx, &mut ret) == 0 {
             assert_eq!(100, ret);
         }
-        qni_exit_program(ctx);
+        qni_program_exit(ctx);
     }
 }
 
 #[test]
 fn api_delete_test() {
     unsafe {
-        let ctx = qni_new_program();
-        qni_delete_program(ctx);
+        let ctx = qni_program_new();
+        qni_program_delete(ctx);
     }
 }
 

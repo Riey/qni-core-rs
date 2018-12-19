@@ -10,17 +10,17 @@ use std::str;
 pub type ProgramEntryCtxArg = *mut Arc<ConsoleContext>;
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_new_program() -> ProgramEntryCtxArg {
+pub unsafe extern "C" fn qni_program_new() -> ProgramEntryCtxArg {
     Box::into_raw(Box::new(Arc::new(ConsoleContext::new())))
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_delete_program(ctx: ProgramEntryCtxArg) {
+pub unsafe extern "C" fn qni_program_delete(ctx: ProgramEntryCtxArg) {
     let _ = Box::from_raw(ctx);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_exit_program(ctx: ProgramEntryCtxArg) {
+pub unsafe extern "C" fn qni_program_exit(ctx: ProgramEntryCtxArg) {
     (*ctx).set_exit();
 }
 
