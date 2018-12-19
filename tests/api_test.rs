@@ -5,14 +5,14 @@ use qni_core_rs::prelude::*;
 static mut EXIT_FLAG: bool = false;
 static mut EXIT_VALUE: i32 = 0;
 
-extern "C" fn test_exit_entry(ctx: ProgramEntryCtxArg) {
+extern "C" fn test_exit_entry(ctx: ConsoleArcCtx) {
     unsafe {
         let mut ret = 0;
 
         EXIT_FLAG = true;
 
         EXIT_VALUE = qni_wait_int(ctx, &mut ret);
-        qni_program_exit(ctx);
+        qni_console_exit(ctx);
     }
 }
 
@@ -52,15 +52,15 @@ fn api_exit_test() {
     }
 }
 
-unsafe fn qni_print_line_rust(ctx: ProgramEntryCtxArg, text: &str) {
+unsafe fn qni_print_line_rust(ctx: ConsoleArcCtx, text: &str) {
     assert_eq!(0, qni_print_line(ctx, text.as_ptr(), text.len()));
 }
 
-extern "C" fn test_simple_entry(ctx: ProgramEntryCtxArg) {
+extern "C" fn test_simple_entry(ctx: ConsoleArcCtx) {
     unsafe {
         qni_print_line_rust(ctx, "Hello, world!");
         qni_print_line_rust(ctx, "Hello, world!");
-        qni_program_exit(ctx);
+        qni_console_exit(ctx);
     }
 }
 
@@ -84,21 +84,21 @@ fn api_simple_test() {
     assert_eq!(2, ctx.get_command_count());
 }
 
-extern "C" fn test_wait_entry(ctx: ProgramEntryCtxArg) {
+extern "C" fn test_wait_entry(ctx: ConsoleArcCtx) {
     unsafe {
         let mut ret = 0;
         if qni_wait_int(ctx, &mut ret) == 0 {
             assert_eq!(100, ret);
         }
-        qni_program_exit(ctx);
+        qni_console_exit(ctx);
     }
 }
 
 #[test]
 fn api_delete_test() {
     unsafe {
-        let ctx = qni_program_new();
-        qni_program_delete(ctx);
+        let ctx = qni_console_new();
+        qni_console_delete(ctx);
     }
 }
 

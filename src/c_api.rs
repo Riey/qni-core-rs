@@ -7,25 +7,25 @@ use std::sync::Arc;
 
 use std::str;
 
-pub type ProgramEntryCtxArg = *mut Arc<ConsoleContext>;
+pub type ConsoleArcCtx = *mut Arc<ConsoleContext>;
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_program_new() -> ProgramEntryCtxArg {
+pub unsafe extern "C" fn qni_console_new() -> ConsoleArcCtx {
     Box::into_raw(Box::new(Arc::new(ConsoleContext::new())))
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_program_delete(ctx: ProgramEntryCtxArg) {
+pub unsafe extern "C" fn qni_console_delete(ctx: ConsoleArcCtx) {
     let _ = Box::from_raw(ctx);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_program_exit(ctx: ProgramEntryCtxArg) {
+pub unsafe extern "C" fn qni_console_exit(ctx: ConsoleArcCtx) {
     (*ctx).set_exit();
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_print(ctx: ProgramEntryCtxArg, text: *const u8, len: usize) -> i32 {
+pub unsafe extern "C" fn qni_print(ctx: ConsoleArcCtx, text: *const u8, len: usize) -> i32 {
     if Arc::strong_count(&*ctx) <= 1 {
         -1
     } else {
@@ -41,7 +41,7 @@ pub unsafe extern "C" fn qni_print(ctx: ProgramEntryCtxArg, text: *const u8, len
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_print_line(
-    ctx: ProgramEntryCtxArg,
+    ctx: ConsoleArcCtx,
     text: *const u8,
     len: usize,
 ) -> i32 {
@@ -54,14 +54,14 @@ pub unsafe extern "C" fn qni_print_line(
         0
 }
 
-pub unsafe extern "C" fn qni_draw_line(ctx: ProgramEntryCtxArg) {
+pub unsafe extern "C" fn qni_draw_line(ctx: ConsoleArcCtx) {
     let mut command = ProgramCommand::new();
     command.mut_PRINT().mut_DRAW_LINE();
     (*ctx).append_command(command);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_new_line(ctx: ProgramEntryCtxArg) {
+pub unsafe extern "C" fn qni_new_line(ctx: ConsoleArcCtx) {
 
         let mut command = ProgramCommand::new();
         command.mut_PRINT().mut_NEW_LINE();
@@ -70,7 +70,7 @@ pub unsafe extern "C" fn qni_new_line(ctx: ProgramEntryCtxArg) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_delete_line(ctx: ProgramEntryCtxArg, count: u32) {
+pub unsafe extern "C" fn qni_delete_line(ctx: ConsoleArcCtx, count: u32) {
     let mut command = ProgramCommand::new();
     command.mut_PRINT().set_DELETE_LINE(count);
 
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn qni_delete_line(ctx: ProgramEntryCtxArg, count: u32) {
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_font(
-    ctx: ProgramEntryCtxArg,
+    ctx: ConsoleArcCtx,
     font_family: *const u8,
     font_family_len: usize,
     font_size: f32,
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn qni_set_font(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_set_text_align(ctx: ProgramEntryCtxArg, text_align: u32) {
+pub unsafe extern "C" fn qni_set_text_align(ctx: ConsoleArcCtx, text_align: u32) {
     let mut command = ProgramCommand::new();
 
     command
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn qni_set_text_align(ctx: ProgramEntryCtxArg, text_align:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_set_text_color(ctx: ProgramEntryCtxArg, color: u32) {
+pub unsafe extern "C" fn qni_set_text_color(ctx: ConsoleArcCtx, color: u32) {
     let mut command = ProgramCommand::new();
     command.mut_UPDATE_SETTING().set_TEXT_COLOR(color);
 
@@ -120,7 +120,7 @@ pub unsafe extern "C" fn qni_set_text_color(ctx: ProgramEntryCtxArg, color: u32)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_set_back_color(ctx: ProgramEntryCtxArg, color: u32) {
+pub unsafe extern "C" fn qni_set_back_color(ctx: ConsoleArcCtx, color: u32) {
     let mut command = ProgramCommand::new();
     command.mut_UPDATE_SETTING().set_BACK_COLOR(color);
 
@@ -128,7 +128,7 @@ pub unsafe extern "C" fn qni_set_back_color(ctx: ProgramEntryCtxArg, color: u32)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_set_highlight_color(ctx: ProgramEntryCtxArg, color: u32) {
+pub unsafe extern "C" fn qni_set_highlight_color(ctx: ConsoleArcCtx, color: u32) {
     let mut command = ProgramCommand::new();
     command.mut_UPDATE_SETTING().set_HIGHLIGHT_COLOR(color);
 
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn qni_set_highlight_color(ctx: ProgramEntryCtxArg, color:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_wait_int(ctx: ProgramEntryCtxArg, ret: *mut i32) -> i32 {
+pub unsafe extern "C" fn qni_wait_int(ctx: ConsoleArcCtx, ret: *mut i32) -> i32 {
     let mut req = ProgramRequest::new();
     req.mut_INPUT().mut_INT();
 
