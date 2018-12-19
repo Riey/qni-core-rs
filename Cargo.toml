@@ -18,10 +18,10 @@ exclude = [
 ]
 
 [build-dependencies]
-protoc-rust = "*"
+protoc-rust = "2.2.0"
 
 [dependencies]
-log = "*"
-protobuf = "*"
-multiqueue = "*"
-chrono = "*"
+log = "0.4.6"
+protobuf = "2.2.0"
+multiqueue = "0.3.2"
+chrono = "0.4.6"
