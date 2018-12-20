@@ -118,7 +118,7 @@ fn api_wait_test() {
     input_req.mut_INPUT().mut_INT();
     input_req.set_tag(0);
 
-    let mut connector_ctx = ConnectorContext::new(ctx.clone());
+    let connector_ctx = ConnectorContext::new(ctx.clone());
 
     loop {
         match connector_ctx.try_get_msg() {

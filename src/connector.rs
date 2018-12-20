@@ -23,7 +23,7 @@ impl ConnectorContext {
         self.console_ctx.need_exit()
     }
 
-    fn process_request(&mut self, req: ConsoleRequest) -> Option<Vec<u8>> {
+    fn process_request(&self, req: ConsoleRequest) -> Option<Vec<u8>> {
         if let Some(req_data) = req.data {
             let mut msg = ProgramMessage::new();
 
@@ -51,7 +51,7 @@ impl ConnectorContext {
         }
     }
 
-    pub fn on_recv_message(&mut self, msg: &[u8]) -> Option<Vec<u8>> {
+    pub fn on_recv_message(&self, msg: &[u8]) -> Option<Vec<u8>> {
         match protobuf::parse_from_bytes::<ConsoleMessage>(msg) {
             Ok(mut msg) => {
                 debug!("received: {:#?}", msg);
@@ -78,7 +78,7 @@ impl ConnectorContext {
         }
     }
 
-    pub fn try_get_msg(&mut self) -> Option<Vec<u8>> {
+    pub fn try_get_msg(&self) -> Option<Vec<u8>> {
         self.send_rx.try_recv().ok()
     }
 }
