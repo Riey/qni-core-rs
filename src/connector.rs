@@ -1,21 +1,21 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use crate::console::ConsoleContext;
 use crate::protos::qni_api::*;
-use bus::BusReader;
 
 pub struct ConnectorContext {
     console_ctx: Arc<ConsoleContext>,
-    accept_rx: BusReader<u32>,
-    last_req_tag: u32,
+    last_req_tag: AtomicUsize,
+    last_sended_req_tag: AtomicUsize,
 }
 
 impl ConnectorContext {
     pub fn new(console_ctx: Arc<ConsoleContext>) -> Self {
         Self {
-            accept_rx: console_ctx.get_accept_rx(),
             console_ctx,
-            last_req_tag: 0,
+            last_req_tag: AtomicUsize::new(0),
+            last_sended_req_tag: AtomicUsize::new(0),
         }
     }
 
@@ -57,34 +57,35 @@ impl ConnectorContext {
                 msg
             })
         } else if msg.has_RES() {
-            self.console_ctx
-                .on_recv_response(msg.take_RES())
-                .map(|tag| {
-                    let mut msg = ProgramMessage::new();
-                    msg.set_ACCEPT_RES(tag);
-                    msg
-                })
+            self.console_ctx.on_recv_response(msg.take_RES());
+
+            None
         } else {
             None
         }
     }
 
-    pub fn try_get_msg(&mut self) -> Option<ProgramMessage> {
-        self.accept_rx.try_recv().ok().map(|accept| {
-            let mut msg = ProgramMessage::new();
-            msg.set_ACCEPT_RES(accept);
-            msg
-        }).or_else(|| {
-            if self.console_ctx.get_cur_input_tag() > self.last_req_tag {
-                self.console_ctx.try_get_req().map(|req| {
-                    self.last_req_tag = req.tag + 1;
-                    let mut msg = ProgramMessage::new();
-                    msg.set_REQ(req);
-                    msg
-                })
+    pub fn try_get_msg(&self) -> Option<ProgramMessage> {
+        if self.console_ctx.get_cur_input_tag() > self.last_req_tag.load(Ordering::Relaxed) {
+            self.console_ctx.try_get_req().map(|req| {
+                self.last_req_tag
+                    .store(req.tag as usize + 1, Ordering::Relaxed);
+                let mut msg = ProgramMessage::new();
+                msg.set_REQ(req);
+                msg
+            })
+        } else {
+            let sended_tag = self.last_sended_req_tag.load(Ordering::Relaxed);
+            let last_tag = self.last_req_tag.load(Ordering::Relaxed);
+
+            if sended_tag < last_tag {
+                let mut msg = ProgramMessage::new();
+                msg.set_ACCEPT_RES(last_tag as u32 - 1);
+                self.last_sended_req_tag.store(last_tag, Ordering::Relaxed);
+                Some(msg)
             } else {
                 None
             }
-        })
+        }
     }
 }

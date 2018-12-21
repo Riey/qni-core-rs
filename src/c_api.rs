@@ -1,4 +1,4 @@
-use crate::console::{WaitError, ConsoleContext};
+use crate::console::{ConsoleContext, WaitError};
 use crate::protos::qni_api::*;
 
 use std::mem;
@@ -49,11 +49,7 @@ pub unsafe extern "C" fn qni_print(ctx: ConsoleArcCtx, text: *const u8, len: usi
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_print_line(
-    ctx: ConsoleArcCtx,
-    text: *const u8,
-    len: usize,
-) {
+pub unsafe extern "C" fn qni_print_line(ctx: ConsoleArcCtx, text: *const u8, len: usize) {
     let mut command = ProgramCommand::new();
     let text = str::from_utf8_unchecked(slice::from_raw_parts(text, len));
     command.mut_PRINT().set_PRINT_LINE(text.into());
@@ -164,9 +160,8 @@ pub unsafe extern "C" fn qni_wait_int(ctx: ConsoleArcCtx, ret: *mut i32) -> QniW
     let mut req = ProgramRequest::new();
     req.mut_INPUT().mut_INT();
 
-    (*ctx).wait_console(
-        req,
-        |res| {
+    (*ctx)
+        .wait_console(req, |res| {
             if !res.has_OK_INPUT() {
                 return false;
             }
@@ -178,8 +173,8 @@ pub unsafe extern "C" fn qni_wait_int(ctx: ConsoleArcCtx, ret: *mut i32) -> QniW
                 }
                 _ => false,
             }
-        },
-    ).into()
+        })
+        .into()
 }
 
 #[no_mangle]
@@ -188,13 +183,17 @@ pub unsafe extern "C" fn qni_str_delete(ptr: *mut u8, len: usize, cap: usize) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn qni_wait_str(ctx: ConsoleArcCtx, ret: *mut *mut u8, ret_len: *mut usize, ret_cap: *mut usize) -> QniWaitResult {
+pub unsafe extern "C" fn qni_wait_str(
+    ctx: ConsoleArcCtx,
+    ret: *mut *mut u8,
+    ret_len: *mut usize,
+    ret_cap: *mut usize,
+) -> QniWaitResult {
     let mut req = ProgramRequest::new();
     req.mut_INPUT().mut_INT();
 
-    (*ctx).wait_console(
-        req,
-        |res| {
+    (*ctx)
+        .wait_console(req, |res| {
             if !res.has_OK_INPUT() {
                 return false;
             }
@@ -209,6 +208,6 @@ pub unsafe extern "C" fn qni_wait_str(ctx: ConsoleArcCtx, ret: *mut *mut u8, ret
                 }
                 _ => false,
             }
-        },
-    ).into()
+        })
+        .into()
 }

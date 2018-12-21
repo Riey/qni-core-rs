@@ -1,7 +1,7 @@
 [package]
 name = "qni-core-rs"
 description = "qni core library"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Riey <creeper844@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/Riey/qni-core-rs"
@@ -24,5 +24,4 @@ protoc-rust = "2.2.0"
 [dependencies]
 protobuf = "2.2.0"
 chrono = "0.4.6"
-bus = "2.0.1"
 atomic-option = "0.1.2"
