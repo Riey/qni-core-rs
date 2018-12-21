@@ -10,7 +10,7 @@ rust:
   - nightly
 
 before_install:
-  - if [ $TRAVIS_OS_NAME = windows ]; then choco install protoc
+  - if [[ "$TRAVIS_OS_NAME" = 'windows' ]]; then choco install protoc; fi
 
 addons:
   apt:
