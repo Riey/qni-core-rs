@@ -2,20 +2,24 @@ language: rust
 
 os:
   - linux
+  - windows
 
 rust:
   - stable
   - beta
   - nightly
 
+before_install:
+  - if [ $TRAVIS_OS_NAME = windows ]; then choco install protoc
+
 addons:
   apt:
     sources:
-    - sourceline: "ppa:maarten-fonville/protobuf"
+      - sourceline: "ppa:maarten-fonville/protobuf"
 
     packages:
-    - protobuf-compiler
-    - libprotoc-dev
+      - protobuf-compiler
+      - libprotoc-dev
 
 git:
   depth: 1
@@ -24,7 +28,7 @@ cache: cargo
 
 matrix:
   allow_failures:
-    - rust: stable
+    - os: windows
 
 script:
   - cargo build --verbose --all
