@@ -1,19 +1,21 @@
 use std::sync::Arc;
-use bus::BusReader;
 
 use crate::console::ConsoleContext;
 use crate::protos::qni_api::*;
+use bus::BusReader;
 
 pub struct ConnectorContext {
     console_ctx: Arc<ConsoleContext>,
-    send_rx: BusReader<ProgramMessage>,
+    accept_rx: BusReader<u32>,
+    last_req_tag: u32,
 }
 
 impl ConnectorContext {
     pub fn new(console_ctx: Arc<ConsoleContext>) -> Self {
         Self {
-            send_rx: console_ctx.get_send_rx(),
+            accept_rx: console_ctx.get_accept_rx(),
             console_ctx,
+            last_req_tag: 0,
         }
     }
 
@@ -68,6 +70,21 @@ impl ConnectorContext {
     }
 
     pub fn try_get_msg(&mut self) -> Option<ProgramMessage> {
-        self.send_rx.try_recv().ok()
+        self.accept_rx.try_recv().ok().map(|accept| {
+            let mut msg = ProgramMessage::new();
+            msg.set_ACCEPT_RES(accept);
+            msg
+        }).or_else(|| {
+            if self.console_ctx.get_cur_input_tag() > self.last_req_tag {
+                self.console_ctx.try_get_req().map(|req| {
+                    self.last_req_tag = req.tag + 1;
+                    let mut msg = ProgramMessage::new();
+                    msg.set_REQ(req);
+                    msg
+                })
+            } else {
+                None
+            }
+        })
     }
 }
