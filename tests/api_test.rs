@@ -3,7 +3,7 @@ use qni_core_rs::prelude::qni_api::*;
 use qni_core_rs::prelude::*;
 
 static mut EXIT_FLAG: bool = false;
-static mut EXIT_VALUE: i32 = 0;
+static mut EXIT_VALUE: QniWaitResult = QniWaitResult::Ok;
 
 extern "C" fn test_exit_entry(ctx: ConsoleArcCtx) {
     unsafe {
@@ -39,7 +39,7 @@ fn api_exit_test() {
         ctx.set_exit();
 
         loop {
-            if EXIT_VALUE != 0 {
+            if EXIT_VALUE != QniWaitResult::Ok {
                 break;
             }
 
@@ -48,12 +48,12 @@ fn api_exit_test() {
 
         handle.join().unwrap();
 
-        assert_eq!(-1, EXIT_VALUE);
+        assert_eq!(QniWaitResult::Exited, EXIT_VALUE);
     }
 }
 
 unsafe fn qni_print_line_rust(ctx: ConsoleArcCtx, text: &str) {
-    assert_eq!(0, qni_print_line(ctx, text.as_ptr(), text.len()));
+    qni_print_line(ctx, text.as_ptr(), text.len());
 }
 
 extern "C" fn test_simple_entry(ctx: ConsoleArcCtx) {
@@ -87,7 +87,7 @@ fn api_simple_test() {
 extern "C" fn test_wait_entry(ctx: ConsoleArcCtx) {
     unsafe {
         let mut ret = 0;
-        if qni_wait_int(ctx, &mut ret) == 0 {
+        if qni_wait_int(ctx, &mut ret) == QniWaitResult::Ok {
             assert_eq!(100, ret);
         }
         qni_console_exit(ctx);
@@ -99,6 +99,10 @@ fn api_delete_test() {
     unsafe {
         let ctx = qni_console_new();
         qni_console_delete(ctx);
+
+        let mut text = "123".to_string();
+        qni_str_delete(text.as_bytes_mut().as_mut_ptr(), text.len(), text.capacity());
+        ::std::mem::forget(text);
     }
 }
 
@@ -118,12 +122,12 @@ fn api_wait_test() {
     input_req.mut_INPUT().mut_INT();
     input_req.set_tag(0);
 
-    let connector_ctx = ConnectorContext::new(ctx.clone());
+    let mut connector_ctx = ConnectorContext::new(ctx.clone());
 
     loop {
         match connector_ctx.try_get_msg() {
             Some(send_msg) => {
-                assert_eq!(msg, protobuf::parse_from_bytes(&send_msg).unwrap());
+                assert_eq!(msg, send_msg);
                 break;
             }
             None => {
@@ -138,7 +142,7 @@ fn api_wait_test() {
     input_res.mut_OK_INPUT().set_INT(100);
 
     assert_eq!(
-        connector_ctx.on_recv_message(&protobuf::Message::write_to_bytes(&msg).unwrap()),
+        connector_ctx.on_recv_message(msg),
         None
     );
 
@@ -157,6 +161,6 @@ fn api_wait_test() {
 
     assert_eq!(
         msg,
-        protobuf::parse_from_bytes(&connector_ctx.try_get_msg().unwrap()).unwrap()
+        connector_ctx.try_get_msg().unwrap()
     );
 }

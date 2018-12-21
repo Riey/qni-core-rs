@@ -25,6 +25,15 @@ pub unsafe extern "C" fn qni_console_exit(ctx: ConsoleArcCtx) {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn qni_console_need_exit(ctx: ConsoleArcCtx) -> i32 {
+    if (*ctx).need_exit() {
+        1
+    } else {
+        0
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn qni_print(ctx: ConsoleArcCtx, text: *const u8, len: usize) -> i32 {
     if Arc::strong_count(&*ctx) <= 1 {
         -1
@@ -44,16 +53,15 @@ pub unsafe extern "C" fn qni_print_line(
     ctx: ConsoleArcCtx,
     text: *const u8,
     len: usize,
-) -> i32 {
-        let mut command = ProgramCommand::new();
-        let text = str::from_utf8_unchecked(slice::from_raw_parts(text, len));
-        command.mut_PRINT().set_PRINT_LINE(text.into());
+) {
+    let mut command = ProgramCommand::new();
+    let text = str::from_utf8_unchecked(slice::from_raw_parts(text, len));
+    command.mut_PRINT().set_PRINT_LINE(text.into());
 
-        (*ctx).append_command(command);
-
-        0
+    (*ctx).append_command(command);
 }
 
+#[no_mangle]
 pub unsafe extern "C" fn qni_draw_line(ctx: ConsoleArcCtx) {
     let mut command = ProgramCommand::new();
     command.mut_PRINT().mut_DRAW_LINE();
@@ -62,11 +70,10 @@ pub unsafe extern "C" fn qni_draw_line(ctx: ConsoleArcCtx) {
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_new_line(ctx: ConsoleArcCtx) {
+    let mut command = ProgramCommand::new();
+    command.mut_PRINT().mut_NEW_LINE();
 
-        let mut command = ProgramCommand::new();
-        command.mut_PRINT().mut_NEW_LINE();
-
-        (*ctx).append_command(command);
+    (*ctx).append_command(command);
 }
 
 #[no_mangle]
@@ -103,7 +110,6 @@ pub unsafe extern "C" fn qni_set_font(
 #[no_mangle]
 pub unsafe extern "C" fn qni_set_text_align(ctx: ConsoleArcCtx, text_align: u32) {
     let mut command = ProgramCommand::new();
-
     command
         .mut_UPDATE_SETTING()
         .set_TEXT_ALIGN(mem::transmute(text_align as u8));
@@ -135,12 +141,30 @@ pub unsafe extern "C" fn qni_set_highlight_color(ctx: ConsoleArcCtx, color: u32)
     (*ctx).append_command(command);
 }
 
+#[repr(i32)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum QniWaitResult {
+    Ok = 0,
+    Exited = -1,
+    Timeout = 1,
+}
+
+impl From<Result<(), WaitError>> for QniWaitResult {
+    fn from(ret: Result<(), WaitError>) -> Self {
+        match ret {
+            Ok(_) => QniWaitResult::Ok,
+            Err(WaitError::Exited) => QniWaitResult::Exited,
+            Err(WaitError::Timeout) => QniWaitResult::Timeout,
+        }
+    }
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn qni_wait_int(ctx: ConsoleArcCtx, ret: *mut i32) -> i32 {
+pub unsafe extern "C" fn qni_wait_int(ctx: ConsoleArcCtx, ret: *mut i32) -> QniWaitResult {
     let mut req = ProgramRequest::new();
     req.mut_INPUT().mut_INT();
 
-    match (*ctx).wait_console(
+    (*ctx).wait_console(
         req,
         |res| {
             if !res.has_OK_INPUT() {
@@ -155,10 +179,36 @@ pub unsafe extern "C" fn qni_wait_int(ctx: ConsoleArcCtx, ret: *mut i32) -> i32 
                 _ => false,
             }
         },
-        None,
-    ) {
-        Ok(_) => 0,
-        Err(WaitError::Exited) => -1,
-        Err(WaitError::Timeout) => 1,
-    }
+    ).into()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn qni_str_delete(ptr: *mut u8, len: usize, cap: usize) {
+    let _ = String::from_raw_parts(ptr, len, cap);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn qni_wait_str(ctx: ConsoleArcCtx, ret: *mut *mut u8, ret_len: *mut usize, ret_cap: *mut usize) -> QniWaitResult {
+    let mut req = ProgramRequest::new();
+    req.mut_INPUT().mut_INT();
+
+    (*ctx).wait_console(
+        req,
+        |res| {
+            if !res.has_OK_INPUT() {
+                return false;
+            }
+
+            match res.take_OK_INPUT().data {
+                Some(InputResponse_oneof_data::STR(mut text)) => {
+                    *ret = text.as_bytes_mut().as_mut_ptr();
+                    *ret_len = text.len();
+                    *ret_cap = text.capacity();
+                    mem::forget(text);
+                    true
+                }
+                _ => false,
+            }
+        },
+    ).into()
 }

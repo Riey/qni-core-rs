@@ -9,4 +9,5 @@ pub mod prelude {
     pub use crate::connector::*;
     pub use crate::console::*;
     pub use crate::protos::qni_api;
+    pub use protobuf;
 }

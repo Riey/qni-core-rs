@@ -1,8 +1,8 @@
-use multiqueue::{broadcast_queue, BroadcastReceiver, BroadcastSender};
-use protobuf::{Message, RepeatedField};
+use bus::{Bus, BusReader};
+use protobuf::RepeatedField;
+use protobuf::well_known_types::Timestamp;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, AtomicPtr, Ordering};
-use std::sync::mpsc::TrySendError;
 use std::sync::{RwLock, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -20,8 +20,7 @@ pub struct ConsoleContext {
     commands: RwLock<Vec<ProgramCommand>>,
     exit_flag: AtomicBool,
     request_tag: AtomicUsize,
-    send_tx: Mutex<BroadcastSender<Vec<u8>>>,
-    send_rx: Mutex<BroadcastReceiver<Vec<u8>>>,
+    send_bus: Mutex<Bus<ProgramMessage>>,
     response: AtomicPtr<ConsoleResponse>,
 }
 
@@ -38,12 +37,9 @@ impl Drop for ConsoleContext {
 
 impl ConsoleContext {
     pub fn new() -> Self {
-        let (send_tx, send_rx) = broadcast_queue(10);
-
         Self {
             commands: Default::default(),
-            send_tx: Mutex::new(send_tx),
-            send_rx: Mutex::new(send_rx),
+            send_bus: Mutex::new(Bus::new(10)),
             exit_flag: AtomicBool::new(false),
             request_tag: AtomicUsize::new(0),
             response: AtomicPtr::new(ptr::null_mut()),
@@ -58,8 +54,8 @@ impl ConsoleContext {
         self.exit_flag.store(true, Ordering::Relaxed)
     }
 
-    pub fn get_send_rx(&self) -> BroadcastReceiver<Vec<u8>> {
-        self.send_rx.lock().unwrap().clone()
+    pub fn get_send_rx(&self) -> BusReader<ProgramMessage> {
+        self.send_bus.lock().unwrap().add_rx()
     }
 
     pub fn append_command(&self, command: ProgramCommand) {
@@ -112,31 +108,22 @@ impl ConsoleContext {
         &self,
         mut req: ProgramRequest,
         mut pred: F,
-        expire: Option<DateTime<Utc>>,
     ) -> Result<(), WaitError> {
         let tag = self.get_next_input_tag();
+
+        let expire = if req.get_INPUT().has_expire() {
+            let expire: &Timestamp = req.get_INPUT().get_expire();
+            Some(Utc.timestamp(expire.seconds, expire.nanos as u32))
+        } else {
+            None
+        };
+
         let mut msg = ProgramMessage::new();
 
-        {
-            req.set_tag(tag);
-            msg.set_REQ(req);
+        req.set_tag(tag);
+        msg.set_REQ(req);
 
-            let mut dat = Message::write_to_bytes(&msg).expect("serialize");
-
-            loop {
-                match self.send_tx.lock().unwrap().try_send(dat) {
-                    Ok(_) => break,
-                    Err(TrySendError::Disconnected(prev_dat))
-                    | Err(TrySendError::Full(prev_dat)) => {
-                        dat = prev_dat;
-                    }
-                }
-
-                thread::sleep(Duration::from_millis(50));
-            }
-
-            msg.clear_REQ();
-        }
+        self.send_bus.lock().unwrap().broadcast(msg);
 
         loop {
 
@@ -167,20 +154,11 @@ impl ConsoleContext {
             thread::sleep(Duration::from_millis(100));
         }
 
+        let mut msg = ProgramMessage::new();
+
         msg.set_ACCEPT_RES(tag);
 
-        let mut dat = Message::write_to_bytes(&msg).expect("serialize");
-
-        loop {
-            match self.send_tx.lock().unwrap().try_send(dat) {
-                Ok(_) => break,
-                Err(TrySendError::Disconnected(prev_dat)) | Err(TrySendError::Full(prev_dat)) => {
-                    dat = prev_dat;
-                }
-            }
-
-            thread::sleep(Duration::from_millis(50));
-        }
+        self.send_bus.lock().unwrap().broadcast(msg);
 
         Ok(())
     }
