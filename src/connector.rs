@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::console::ConsoleContext;
 use crate::protos::qni_api::*;
 
-/// Connector to ConsoleContext and handling events
+/// Connect to ConsoleContext and handling events
 pub struct ConnectorContext {
     console_ctx: Arc<ConsoleContext>,
     last_req_tag: AtomicUsize,
