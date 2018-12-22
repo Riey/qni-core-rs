@@ -8,9 +8,12 @@ use std::time::Duration;
 
 use crate::protos::qni_api::*;
 
+/// Console wait error
 #[derive(Debug)]
 pub enum WaitError {
+    /// Request is expired before get response
     Timeout,
+    /// Console exited before get response
     Exited,
 }
 

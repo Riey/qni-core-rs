@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use std::str;
 
+/// ConsoleContext handle for ffi
 pub type ConsoleArcCtx = *mut Arc<ConsoleContext>;
 
 #[no_mangle]
@@ -137,6 +138,7 @@ pub unsafe extern "C" fn qni_set_highlight_color(ctx: ConsoleArcCtx, color: u32)
     (*ctx).append_command(command);
 }
 
+/// Present Vec<u8> for ffi
 #[repr(C)]
 pub struct QniVec {
     ptr: *mut u8,
