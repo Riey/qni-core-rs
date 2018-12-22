@@ -137,77 +137,67 @@ pub unsafe extern "C" fn qni_set_highlight_color(ctx: ConsoleArcCtx, color: u32)
     (*ctx).append_command(command);
 }
 
+#[repr(C)]
+pub struct QniVec {
+    ptr: *mut u8,
+    len: usize,
+    cap: usize,
+}
+
+impl QniVec {
+    pub unsafe fn into_vec(self) -> Vec<u8> {
+        Vec::from_raw_parts(self.ptr, self.len, self.cap)
+    }
+
+    pub fn from_vec(mut vec: Vec<u8>) -> Self {
+        let ret = Self {
+            ptr: vec.as_mut_ptr(),
+            len: vec.len(),
+            cap: vec.capacity(),
+        };
+
+        mem::forget(vec);
+
+        ret
+    }
+}
+
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum QniWaitResult {
     Ok = 0,
-    Exited = -1,
-    Timeout = 1,
+    Exited = 1,
+    Timeout = 2,
+    InvalidReq = -1,
+    Internal = -2,
 }
 
-impl From<Result<(), WaitError>> for QniWaitResult {
-    fn from(ret: Result<(), WaitError>) -> Self {
-        match ret {
-            Ok(_) => QniWaitResult::Ok,
+#[no_mangle]
+pub unsafe extern "C" fn qni_vec_delete(vec: *mut QniVec) {
+    let _ = ::std::ptr::read(vec).into_vec();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn qni_wait(
+    ctx: ConsoleArcCtx,
+    buf: *mut u8,
+    len: usize,
+    out: *mut QniVec,
+) -> QniWaitResult {
+    let req = protobuf::parse_from_bytes(::std::slice::from_raw_parts(buf, len));
+
+    match req {
+        Ok(req) => match (*ctx).wait_console(req) {
+            Ok(res) => match protobuf::Message::write_to_bytes(&*res) {
+                Ok(buf) => {
+                    *out = QniVec::from_vec(buf);
+                    QniWaitResult::Ok
+                }
+                Err(_) => QniWaitResult::Internal,
+            },
             Err(WaitError::Exited) => QniWaitResult::Exited,
             Err(WaitError::Timeout) => QniWaitResult::Timeout,
-        }
+        },
+        _ => QniWaitResult::InvalidReq,
     }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qni_wait_int(ctx: ConsoleArcCtx, ret: *mut i32) -> QniWaitResult {
-    let mut req = ProgramRequest::new();
-    req.mut_INPUT().mut_INT();
-
-    (*ctx)
-        .wait_console(req, |res| {
-            if !res.has_OK_INPUT() {
-                return false;
-            }
-
-            match res.take_OK_INPUT().data {
-                Some(InputResponse_oneof_data::INT(num)) => {
-                    *ret = num;
-                    true
-                }
-                _ => false,
-            }
-        })
-        .into()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qni_str_delete(ptr: *mut u8, len: usize, cap: usize) {
-    let _ = String::from_raw_parts(ptr, len, cap);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qni_wait_str(
-    ctx: ConsoleArcCtx,
-    ret: *mut *mut u8,
-    ret_len: *mut usize,
-    ret_cap: *mut usize,
-) -> QniWaitResult {
-    let mut req = ProgramRequest::new();
-    req.mut_INPUT().mut_INT();
-
-    (*ctx)
-        .wait_console(req, |res| {
-            if !res.has_OK_INPUT() {
-                return false;
-            }
-
-            match res.take_OK_INPUT().data {
-                Some(InputResponse_oneof_data::STR(mut text)) => {
-                    *ret = text.as_bytes_mut().as_mut_ptr();
-                    *ret_len = text.len();
-                    *ret_cap = text.capacity();
-                    mem::forget(text);
-                    true
-                }
-                _ => false,
-            }
-        })
-        .into()
 }

@@ -1,9 +1,24 @@
 use qni_core_rs::c_api::*;
 use qni_core_rs::prelude::qni_api::*;
 use qni_core_rs::prelude::*;
+use std::mem;
 
 static mut EXIT_FLAG: bool = false;
 static mut EXIT_VALUE: QniWaitResult = QniWaitResult::Ok;
+
+unsafe fn qni_wait_int(ctx: ConsoleArcCtx, ret: &mut i32) -> QniWaitResult {
+    let mut req = ProgramRequest::new();
+    req.mut_INPUT().mut_INT();
+    let mut buf = protobuf::Message::write_to_bytes(&req).unwrap();
+    let mut ret_vec = mem::uninitialized();
+
+    let wait_ret = qni_wait(ctx, buf.as_mut_ptr(), buf.len(), &mut ret_vec);
+    let res = protobuf::parse_from_bytes::<ConsoleResponse>(&ret_vec.into_vec()).unwrap();
+
+    *ret = res.get_OK_INPUT().get_INT();
+
+    wait_ret
+}
 
 extern "C" fn test_exit_entry(ctx: ConsoleArcCtx) {
     unsafe {
@@ -100,9 +115,8 @@ fn api_delete_test() {
         let ctx = qni_console_new();
         qni_console_delete(ctx);
 
-        let mut text = "123".to_string();
-        qni_str_delete(text.as_bytes_mut().as_mut_ptr(), text.len(), text.capacity());
-        ::std::mem::forget(text);
+        let text = vec![1, 2, 3];
+        qni_vec_delete(&mut QniVec::from_vec(text));
     }
 }
 
