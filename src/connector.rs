@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::console::ConsoleContext;
 use crate::protos::qni_api::*;
 
+/// Connector to ConsoleContext and handling events
 pub struct ConnectorContext {
     console_ctx: Arc<ConsoleContext>,
     last_req_tag: AtomicUsize,
@@ -11,6 +12,8 @@ pub struct ConnectorContext {
 }
 
 impl ConnectorContext {
+
+    /// Create new ConnectorContext
     pub fn new(console_ctx: Arc<ConsoleContext>) -> Self {
         Self {
             console_ctx,
@@ -19,10 +22,12 @@ impl ConnectorContext {
         }
     }
 
+    /// Connector need exit
     pub fn need_exit(&self) -> bool {
         self.console_ctx.need_exit()
     }
 
+    /// Process ConsoleRequest and return ProgramResponse optional
     fn process_request(&self, req: ConsoleRequest) -> Option<ProgramResponse> {
         if let Some(req_data) = req.data {
             let mut res = ProgramResponse::new();
@@ -38,7 +43,7 @@ impl ConnectorContext {
                         err.set_reason("program exited".into());
                         err.set_req_type("GET_STATE".into());
                     } else {
-                        res.set_OK_GET_STATE(ctx.export_command(from));
+                        res.mut_OK_GET_STATE().set_commands(ctx.export_command(from).into());
                     }
                 }
             }
@@ -49,6 +54,7 @@ impl ConnectorContext {
         }
     }
 
+    /// Handling ConsoleMessage receive and return ProgramMessage to response
     pub fn on_recv_message(&self, mut msg: ConsoleMessage) -> Option<ProgramMessage> {
         if msg.has_REQ() {
             self.process_request(msg.take_REQ()).map(|res| {
@@ -65,6 +71,7 @@ impl ConnectorContext {
         }
     }
 
+    /// Return ProgramMessage when need to send message to FrontEnd
     pub fn try_get_msg(&self) -> Option<ProgramMessage> {
         if self.console_ctx.get_cur_input_tag() > self.last_req_tag.load(Ordering::Relaxed) {
             self.console_ctx.try_get_req().map(|req| {

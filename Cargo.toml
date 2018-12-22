@@ -1,7 +1,8 @@
 [package]
 name = "qni-core-rs"
 description = "qni core library"
-version = "0.2.6"
+version = "0.3.0"
+keywords = ["qni", "core"]
 authors = ["Riey <creeper844@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/Riey/qni-core-rs"
