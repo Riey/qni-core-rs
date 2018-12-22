@@ -1,7 +1,6 @@
 use qni_core_rs::c_api::*;
 use qni_core_rs::prelude::qni_api::*;
 use qni_core_rs::prelude::*;
-use std::mem;
 
 static mut EXIT_FLAG: bool = false;
 static mut EXIT_VALUE: QniWaitResult = QniWaitResult::Ok;
@@ -10,7 +9,7 @@ unsafe fn qni_wait_int(ctx: ConsoleArcCtx, ret: &mut i32) -> QniWaitResult {
     let mut req = ProgramRequest::new();
     req.mut_INPUT().mut_INT();
     let mut buf = protobuf::Message::write_to_bytes(&req).unwrap();
-    let mut ret_vec = mem::uninitialized();
+    let mut ret_vec = QniVec::from_vec(Vec::new());
 
     let wait_ret = qni_wait(ctx, buf.as_mut_ptr(), buf.len(), &mut ret_vec);
     let res = protobuf::parse_from_bytes::<ConsoleResponse>(&ret_vec.into_vec()).unwrap();
