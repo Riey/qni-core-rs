@@ -1,5 +1,6 @@
 use atomic_option::AtomicOption;
 use chrono::prelude::*;
+use futures::prelude::*;
 use protobuf::well_known_types::Timestamp;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::RwLock;
@@ -7,14 +8,65 @@ use std::thread;
 use std::time::Duration;
 
 use crate::protos::qni_api::*;
+use std::sync::Arc;
 
 /// Console wait error
-#[derive(Debug)]
+#[derive(Debug, Fail)]
 pub enum WaitError {
     /// Request is expired before get response
+    #[fail(display = "wait timeout")]
     Timeout,
     /// Console exited before get response
+    #[fail(display = "console exited")]
     Exited,
+    /// Other request is enter before get response
+    #[fail(display = "request outdated")]
+    OutDated,
+}
+
+pub struct ConsoleWaitFuture {
+    ctx: Arc<ConsoleContext>,
+    expire: Option<DateTime<Utc>>,
+    tag: usize,
+}
+
+impl ConsoleWaitFuture {
+    pub fn new(ctx: Arc<ConsoleContext>, req: ProgramRequest) -> Self {
+        let expire = if req.get_INPUT().has_expire() {
+            let expire: &Timestamp = req.get_INPUT().get_expire();
+            Some(Utc.timestamp(expire.seconds, expire.nanos as u32))
+        } else {
+            None
+        };
+
+        let tag = ctx.set_req(req);
+
+        Self { ctx, expire, tag }
+    }
+}
+
+impl Future for ConsoleWaitFuture {
+    type Item = Box<ConsoleResponse>;
+    type Error = WaitError;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        if self.ctx.need_exit() {
+            Err(WaitError::Exited)
+        } else if self.ctx.is_outdated_tag(self.tag) {
+            Err(WaitError::OutDated)
+        } else {
+            if let Some(expire) = self.expire {
+                if Utc::now() >= expire {
+                    return Err(WaitError::Timeout);
+                }
+            }
+
+            match self.ctx.response.take(Ordering::Acquire) {
+                Some(res) => Ok(Async::Ready(res)),
+                None => Ok(Async::NotReady),
+            }
+        }
+    }
 }
 
 /// Present ConsoleContext
@@ -27,7 +79,6 @@ pub struct ConsoleContext {
 }
 
 impl ConsoleContext {
-
     /// Create new ConsoleContext
     pub fn new() -> Self {
         Self {
@@ -52,6 +103,10 @@ impl ConsoleContext {
     /// Append console command
     pub fn append_command(&self, command: ProgramCommand) {
         self.commands.write().unwrap().push(command);
+    }
+
+    pub fn append_command_mut(&mut self, command: ProgramCommand) {
+        self.commands.get_mut().unwrap().push(command);
     }
 
     /// Export command to Vec
@@ -84,7 +139,15 @@ impl ConsoleContext {
         }
     }
 
-    /// Try get current ProgramRequest
+    /// Set current request
+    fn set_req(&self, mut req: ProgramRequest) -> usize {
+        let tag = self.get_next_input_tag();
+        req.set_tag(tag as u32);
+        *self.request.write().unwrap() = Some(req);
+        tag
+    }
+
+    /// Try get current request
     pub fn try_get_req(&self) -> Option<ProgramRequest> {
         self.request.read().unwrap().as_ref().map(Clone::clone)
     }
@@ -99,9 +162,7 @@ impl ConsoleContext {
     /// # Errors
     ///
     /// If Console exited, tag is outdated, or request is expired, then error is returned
-    pub fn wait_console(&self, mut req: ProgramRequest) -> Result<Box<ConsoleResponse>, WaitError> {
-        let tag = self.get_next_input_tag();
-
+    pub fn wait_console(&self, req: ProgramRequest) -> Result<Box<ConsoleResponse>, WaitError> {
         let expire = if req.get_INPUT().has_expire() {
             let expire: &Timestamp = req.get_INPUT().get_expire();
             Some(Utc.timestamp(expire.seconds, expire.nanos as u32))
@@ -109,9 +170,7 @@ impl ConsoleContext {
             None
         };
 
-        req.set_tag(tag as u32);
-
-        *self.request.write().unwrap() = Some(req);
+        let tag = self.set_req(req);
 
         let ret = loop {
             if self.need_exit() {
@@ -138,5 +197,10 @@ impl ConsoleContext {
         };
 
         ret
+    }
+
+    /// Wait ConsoleResponse async
+    pub fn wait_console_async(ctx: Arc<ConsoleContext>, req: ProgramRequest) -> ConsoleWaitFuture {
+        ConsoleWaitFuture::new(ctx, req)
     }
 }

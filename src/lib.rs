@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate failure;
+
 pub mod connector;
 pub mod console;
 pub mod protos;

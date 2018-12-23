@@ -12,7 +12,6 @@ pub struct ConnectorContext {
 }
 
 impl ConnectorContext {
-
     /// Create new ConnectorContext
     pub fn new(console_ctx: Arc<ConsoleContext>) -> Self {
         Self {
@@ -43,7 +42,8 @@ impl ConnectorContext {
                         err.set_reason("program exited".into());
                         err.set_req_type("GET_STATE".into());
                     } else {
-                        res.mut_OK_GET_STATE().set_commands(ctx.export_command(from).into());
+                        res.mut_OK_GET_STATE()
+                            .set_commands(ctx.export_command(from).into());
                     }
                 }
             }

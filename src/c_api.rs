@@ -170,6 +170,7 @@ pub enum QniWaitResult {
     Ok = 0,
     Exited = 1,
     Timeout = 2,
+    OutDated = 3,
     InvalidReq = -1,
     Internal = -2,
 }
@@ -199,6 +200,7 @@ pub unsafe extern "C" fn qni_wait(
             },
             Err(WaitError::Exited) => QniWaitResult::Exited,
             Err(WaitError::Timeout) => QniWaitResult::Timeout,
+            Err(WaitError::OutDated) => QniWaitResult::OutDated,
         },
         _ => QniWaitResult::InvalidReq,
     }

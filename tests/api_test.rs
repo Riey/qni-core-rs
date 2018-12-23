@@ -2,6 +2,11 @@ use qni_core_rs::c_api::*;
 use qni_core_rs::prelude::qni_api::*;
 use qni_core_rs::prelude::*;
 
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
+use futures::prelude::*;
+
 static mut EXIT_FLAG: bool = false;
 static mut EXIT_VALUE: QniWaitResult = QniWaitResult::Ok;
 
@@ -78,9 +83,6 @@ extern "C" fn test_simple_entry(ctx: ConsoleArcCtx) {
     }
 }
 
-use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 
 #[test]
 fn api_simple_test() {
@@ -117,6 +119,20 @@ fn api_delete_test() {
         let text = vec![1, 2, 3];
         qni_vec_delete(&mut QniVec::from_vec(text));
     }
+}
+
+#[test]
+fn api_wait_async_text() {
+    let ctx = Arc::new(ConsoleContext::new());
+    let mut req = ProgramRequest::new();
+    req.mut_INPUT().mut_INT();
+    let res_future = ConsoleContext::wait_console_async(ctx.clone(), req);
+
+    let mut res = ConsoleResponse::new();
+    res.mut_OK_INPUT().set_INT(100);
+    ctx.on_recv_response(res);
+
+    assert_eq!(res_future.wait().unwrap().get_OK_INPUT().get_INT(), 100);
 }
 
 #[test]
