@@ -12,9 +12,7 @@ license = "LGPL-3.0"
 readme = "README.md"
 
 exclude = [
-    "build.rs",
     ".gitignore",
-    ".gitmodules",
     ".travis.yml",
     ".vscode/**/*",
     ".idea/**/*",
@@ -22,6 +20,7 @@ exclude = [
 
 [build-dependencies]
 protoc-rust = "2.2.0"
+git2 = "0.10.1"
 
 [dependencies]
 protobuf = "2.2.0"
