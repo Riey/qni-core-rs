@@ -10,20 +10,6 @@ use futures::prelude::*;
 static mut EXIT_FLAG: bool = false;
 static mut EXIT_VALUE: QniWaitResult = QniWaitResult::Ok;
 
-unsafe fn qni_wait_int(ctx: ConsoleArcCtx, ret: &mut i32) -> QniWaitResult {
-    let mut req = ProgramRequest::new();
-    req.mut_INPUT().mut_INT();
-    let mut buf = protobuf::Message::write_to_bytes(&req).unwrap();
-    let mut ret_vec = QniVec::from_vec(Vec::new());
-
-    let wait_ret = qni_wait(ctx, buf.as_mut_ptr(), buf.len(), &mut ret_vec);
-    let res = protobuf::parse_from_bytes::<ConsoleResponse>(&ret_vec.into_vec()).unwrap();
-
-    *ret = res.get_OK_INPUT().get_INT();
-
-    wait_ret
-}
-
 extern "C" fn test_exit_entry(ctx: ConsoleArcCtx) {
     unsafe {
         let mut ret = 0;
@@ -116,8 +102,9 @@ fn api_delete_test() {
         let ctx = qni_console_new();
         qni_console_delete(ctx);
 
-        let text = vec![1, 2, 3];
-        qni_vec_delete(&mut QniVec::from_vec(text));
+        let mut buf = vec![1, 2, 3];
+        qni_buf_delete(buf.as_mut_ptr(), buf.len(), buf.capacity());
+        std::mem::forget(buf);
     }
 }
 

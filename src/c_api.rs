@@ -138,32 +138,6 @@ pub unsafe extern "C" fn qni_set_highlight_color(ctx: ConsoleArcCtx, color: u32)
     (*ctx).append_command(command);
 }
 
-/// Present Vec<u8> for ffi
-#[repr(C)]
-pub struct QniVec {
-    ptr: *mut u8,
-    len: usize,
-    cap: usize,
-}
-
-impl QniVec {
-    pub unsafe fn into_vec(self) -> Vec<u8> {
-        Vec::from_raw_parts(self.ptr, self.len, self.cap)
-    }
-
-    pub fn from_vec(mut vec: Vec<u8>) -> Self {
-        let ret = Self {
-            ptr: vec.as_mut_ptr(),
-            len: vec.len(),
-            cap: vec.capacity(),
-        };
-
-        mem::forget(vec);
-
-        ret
-    }
-}
-
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum QniWaitResult {
@@ -171,37 +145,65 @@ pub enum QniWaitResult {
     Exited = 1,
     Timeout = 2,
     OutDated = 3,
-    InvalidReq = -1,
-    Internal = -2,
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn qni_vec_delete(vec: *mut QniVec) {
-    let _ = ::std::ptr::read(vec).into_vec();
+    Internal = -1,
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn qni_wait(
     ctx: ConsoleArcCtx,
-    buf: *mut u8,
-    len: usize,
-    out: *mut QniVec,
+    req: *mut ProgramRequest,
+    out: *mut *mut ConsoleResponse,
 ) -> QniWaitResult {
-    let req = protobuf::parse_from_bytes(::std::slice::from_raw_parts(buf, len));
+    let req = Box::from_raw(req);
 
-    match req {
-        Ok(req) => match (*ctx).wait_console(req) {
-            Ok(res) => match protobuf::Message::write_to_bytes(&*res) {
-                Ok(buf) => {
-                    *out = QniVec::from_vec(buf);
-                    QniWaitResult::Ok
-                }
-                Err(_) => QniWaitResult::Internal,
-            },
-            Err(WaitError::Exited) => QniWaitResult::Exited,
-            Err(WaitError::Timeout) => QniWaitResult::Timeout,
-            Err(WaitError::OutDated) => QniWaitResult::OutDated,
+    match (*ctx).wait_console(*req) {
+        Ok(res) => {
+            *out = Box::into_raw(res);
+            QniWaitResult::Ok
         },
-        _ => QniWaitResult::InvalidReq,
+        Err(WaitError::Exited) => QniWaitResult::Exited,
+        Err(WaitError::Timeout) => QniWaitResult::Timeout,
+        Err(WaitError::OutDated) => QniWaitResult::OutDated,
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn qni_buf_delete(buf: *mut u8, len: usize, cap: usize) {
+    let _ = Vec::from_raw_parts(buf, len, cap);
+}
+
+macro_rules! make_wait_fn {
+    ($name:ident($ctx:ident: ConsoleArcCtx $($(,)? $arg_name:ident: $arg_ty:ty)*), $req_block:block, |$res:ident| $ok_block:block) => {
+        #[no_mangle]
+        pub unsafe extern "C" fn $name($ctx: ConsoleArcCtx, $($arg_name: $arg_ty,)+) -> QniWaitResult {
+            match (*$ctx).wait_console($req_block) {
+                Ok(mut $res) => {
+                    $ok_block
+                    QniWaitResult::Ok
+                }
+                Err(WaitError::Exited) => QniWaitResult::Exited,
+                Err(WaitError::Timeout) => QniWaitResult::Timeout,
+                Err(WaitError::OutDated) => QniWaitResult::OutDated,
+            }
+        }
+    };
+}
+
+make_wait_fn!(qni_wait_str(ctx: ConsoleArcCtx, buf: *mut *mut u8, buf_len: *mut usize, buf_cap: *mut usize), {
+    let mut req = ProgramRequest::new();
+    req.mut_INPUT().mut_STR();
+    req
+}, |res| {
+    let mut text = res.take_OK_INPUT().take_STR().into_bytes();
+    *buf = text.as_mut_ptr();
+    *buf_len = text.len();
+    *buf_cap = text.capacity();
+});
+
+make_wait_fn!(qni_wait_int(ctx: ConsoleArcCtx, num: *mut i32), {
+    let mut req = ProgramRequest::new();
+    req.mut_INPUT().mut_INT();
+    req
+}, |res| {
+    *num = res.take_OK_INPUT().get_INT();
+});

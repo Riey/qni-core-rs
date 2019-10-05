@@ -21,10 +21,10 @@ exclude = [
 ]
 
 [build-dependencies]
-protoc-rust = "2.2.0"
+protoc-rust = "2.8"
 
 [dependencies]
-protobuf = "2.2.0"
+protobuf = "2.8"
 chrono = "0.4.6"
 atomic-option = "0.1.2"
 failure = "0.1.3"

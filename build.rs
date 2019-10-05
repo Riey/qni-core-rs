@@ -8,6 +8,7 @@ fn main() {
             input: &["api/qni-api.proto"],
             includes: &["api"],
             customize: Customize {
+                serde_derive: Some(true),
                 ..Default::default()
             },
         })
