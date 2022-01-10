@@ -1,10 +1,10 @@
 [package]
 name = "qni-core-rs"
 description = "qni core library"
-version = "0.3.2"
+version = "0.4.0"
 keywords = ["qni", "core"]
 authors = ["Riey <creeper844@gmail.com>"]
-edition = "2018"
+edition = "2021"
 repository = "https://github.com/Riey/qni-core-rs"
 homepage = "https://github.com/Riey/qni-core-rs"
 documentation = "https://docs.rs/qni-core-rs"
@@ -21,11 +21,12 @@ exclude = [
 ]
 
 [build-dependencies]
-protoc-rust = "2.8"
+protoc-rust = "2.25.2"
 
 [dependencies]
-protobuf = "2.8"
-chrono = "0.4.6"
+protobuf = "2.25.2"
 atomic-option = "0.1.2"
-failure = "0.1.3"
-futures = "0.1.25"
+thiserror = "1.0.30"
+chrono = "0.4.19"
+
+[features]

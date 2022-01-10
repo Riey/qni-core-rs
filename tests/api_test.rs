@@ -5,7 +5,6 @@ use qni_core_rs::prelude::*;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use futures::prelude::*;
 
 static mut EXIT_FLAG: bool = false;
 static mut EXIT_VALUE: QniWaitResult = QniWaitResult::Ok;
@@ -69,7 +68,6 @@ extern "C" fn test_simple_entry(ctx: ConsoleArcCtx) {
     }
 }
 
-
 #[test]
 fn api_simple_test() {
     let mut ctx = Arc::new(ConsoleContext::new());
@@ -109,20 +107,6 @@ fn api_delete_test() {
 }
 
 #[test]
-fn api_wait_async_text() {
-    let ctx = Arc::new(ConsoleContext::new());
-    let mut req = ProgramRequest::new();
-    req.mut_INPUT().mut_INT();
-    let res_future = ConsoleContext::wait_console_async(ctx.clone(), req);
-
-    let mut res = ConsoleResponse::new();
-    res.mut_OK_INPUT().set_INT(100);
-    ctx.on_recv_response(res);
-
-    assert_eq!(res_future.wait().unwrap().get_OK_INPUT().get_INT(), 100);
-}
-
-#[test]
 fn api_wait_test() {
     let ctx = Arc::new(ConsoleContext::new());
     {
@@ -157,10 +141,7 @@ fn api_wait_test() {
 
     input_res.mut_OK_INPUT().set_INT(100);
 
-    assert_eq!(
-        connector_ctx.on_recv_message(msg),
-        None
-    );
+    assert_eq!(connector_ctx.on_recv_message(msg), None);
 
     loop {
         if ctx.need_exit() {
@@ -175,8 +156,5 @@ fn api_wait_test() {
     let mut msg = ProgramMessage::new();
     msg.set_ACCEPT_RES(0);
 
-    assert_eq!(
-        msg,
-        connector_ctx.try_get_msg().unwrap()
-    );
+    assert_eq!(msg, connector_ctx.try_get_msg().unwrap());
 }

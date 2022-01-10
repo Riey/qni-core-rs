@@ -160,7 +160,7 @@ pub unsafe extern "C" fn qni_wait(
         Ok(res) => {
             *out = Box::into_raw(res);
             QniWaitResult::Ok
-        },
+        }
         Err(WaitError::Exited) => QniWaitResult::Exited,
         Err(WaitError::Timeout) => QniWaitResult::Timeout,
         Err(WaitError::OutDated) => QniWaitResult::OutDated,
@@ -189,21 +189,34 @@ macro_rules! make_wait_fn {
     };
 }
 
-make_wait_fn!(qni_wait_str(ctx: ConsoleArcCtx, buf: *mut *mut u8, buf_len: *mut usize, buf_cap: *mut usize), {
-    let mut req = ProgramRequest::new();
-    req.mut_INPUT().mut_STR();
-    req
-}, |res| {
-    let mut text = res.take_OK_INPUT().take_STR().into_bytes();
-    *buf = text.as_mut_ptr();
-    *buf_len = text.len();
-    *buf_cap = text.capacity();
-});
+make_wait_fn!(
+    qni_wait_str(
+        ctx: ConsoleArcCtx,
+        buf: *mut *mut u8,
+        buf_len: *mut usize,
+        buf_cap: *mut usize
+    ),
+    {
+        let mut req = ProgramRequest::new();
+        req.mut_INPUT().mut_STR();
+        req
+    },
+    |res| {
+        let mut text = res.take_OK_INPUT().take_STR().into_bytes();
+        *buf = text.as_mut_ptr();
+        *buf_len = text.len();
+        *buf_cap = text.capacity();
+    }
+);
 
-make_wait_fn!(qni_wait_int(ctx: ConsoleArcCtx, num: *mut i32), {
-    let mut req = ProgramRequest::new();
-    req.mut_INPUT().mut_INT();
-    req
-}, |res| {
-    *num = res.take_OK_INPUT().get_INT();
-});
+make_wait_fn!(
+    qni_wait_int(ctx: ConsoleArcCtx, num: *mut i32),
+    {
+        let mut req = ProgramRequest::new();
+        req.mut_INPUT().mut_INT();
+        req
+    },
+    |res| {
+        *num = res.take_OK_INPUT().get_INT();
+    }
+);

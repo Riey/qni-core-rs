@@ -1,6 +1,5 @@
 use atomic_option::AtomicOption;
 use chrono::prelude::*;
-use futures::prelude::*;
 use protobuf::well_known_types::Timestamp;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::RwLock;
@@ -8,65 +7,19 @@ use std::thread;
 use std::time::Duration;
 
 use crate::protos::qni_api::*;
-use std::sync::Arc;
 
 /// Console wait error
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub enum WaitError {
     /// Request is expired before get response
-    #[fail(display = "wait timeout")]
+    #[error("wait timeout")]
     Timeout,
     /// Console exited before get response
-    #[fail(display = "console exited")]
+    #[error("console exited")]
     Exited,
     /// Other request is enter before get response
-    #[fail(display = "request outdated")]
+    #[error("request outdated")]
     OutDated,
-}
-
-pub struct ConsoleWaitFuture {
-    ctx: Arc<ConsoleContext>,
-    expire: Option<DateTime<Utc>>,
-    tag: usize,
-}
-
-impl ConsoleWaitFuture {
-    pub fn new(ctx: Arc<ConsoleContext>, req: ProgramRequest) -> Self {
-        let expire = if req.get_INPUT().has_expire() {
-            let expire: &Timestamp = req.get_INPUT().get_expire();
-            Some(Utc.timestamp(expire.seconds, expire.nanos as u32))
-        } else {
-            None
-        };
-
-        let tag = ctx.set_req(req);
-
-        Self { ctx, expire, tag }
-    }
-}
-
-impl Future for ConsoleWaitFuture {
-    type Item = Box<ConsoleResponse>;
-    type Error = WaitError;
-
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        if self.ctx.need_exit() {
-            Err(WaitError::Exited)
-        } else if self.ctx.is_outdated_tag(self.tag) {
-            Err(WaitError::OutDated)
-        } else {
-            if let Some(expire) = self.expire {
-                if Utc::now() >= expire {
-                    return Err(WaitError::Timeout);
-                }
-            }
-
-            match self.ctx.response.take(Ordering::Acquire) {
-                Some(res) => Ok(Async::Ready(res)),
-                None => Ok(Async::NotReady),
-            }
-        }
-    }
 }
 
 /// Present ConsoleContext
@@ -197,10 +150,5 @@ impl ConsoleContext {
         };
 
         ret
-    }
-
-    /// Wait ConsoleResponse async
-    pub fn wait_console_async(ctx: Arc<ConsoleContext>, req: ProgramRequest) -> ConsoleWaitFuture {
-        ConsoleWaitFuture::new(ctx, req)
     }
 }
